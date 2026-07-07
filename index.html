@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-22">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-22" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-22">
-  <link rel="stylesheet" href="style.css?v=20260707-22">
+  <link rel="manifest" href="manifest.json?v=20260707-23">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-23" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-23">
+  <link rel="stylesheet" href="style.css?v=20260707-23">
 </head>
 <body>
   <header class="app-header">
@@ -183,8 +183,10 @@
             <label class="wide-field">Source link or note<input id="customIngredientSourceUrl" class="field" placeholder="Optional"></label>
             <label class="toggle-row wide-field"><input id="customIngredientVerified" type="checkbox"><span>Confirmed from label or verified source</span></label>
           </div>
+          <div class="info-band compact-info">Use lookup for common ingredients. Use the label photo for packaged or local foods when the database match is unclear.</div>
           <div class="inline-controls">
             <button id="clearCustomIngredient" class="ghost-button" type="button">Clear form</button>
+            <button id="findIngredientNutrition" class="ghost-button" type="button">Run ingredient lookup</button>
             <button id="saveCustomIngredient" class="primary-button" type="button">Save ingredient</button>
           </div>
         </section>
@@ -214,7 +216,7 @@
             <label class="lookup-key">USDA key<input id="usdaApiKey" class="field" type="password" autocomplete="off" placeholder="Optional; saved only in this browser"></label>
             <button id="saveUsdaApiKey" class="ghost-button" type="button">Save key</button>
           </div>
-          <div id="lookupStatus" class="label-status">Search by product name, brand, or barcode. Open Food Facts works without a key; USDA needs a free API key saved in this browser.</div>
+          <div id="lookupStatus" class="label-status">Search by food name, brand, or barcode. Open Food Facts works without a key; USDA needs a free API key saved in this browser.</div>
           <div class="safe-source-grid">
             <div><strong>1. Saved foods</strong><span>Checks anything already confirmed in this app.</span></div>
             <div><strong>2. Open Food Facts</strong><span>Best for barcodes and packaged products.</span></div>
@@ -408,7 +410,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-22"></script>
-  <script src="app.js?v=20260707-22"></script>
+  <script src="data.js?v=20260707-23"></script>
+  <script src="app.js?v=20260707-23"></script>
 </body>
 </html>
