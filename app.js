@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-14";
+  const APP_VERSION = "20260707-15";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -1224,7 +1224,10 @@
       if (emptySources.length && remoteResults.length) messages.push(`${emptySources.join(", ")} searched but did not find a usable match.`);
 
       const rankedResults = rankLookupResults(dedupeLookupResults([...localResults, ...remoteResults]), product, barcode);
-      state.nutritionLookup.results = rankedResults.filter((result) => result.rankScore >= 25).slice(0, 8);
+      const filteredResults = rankedResults.filter((result) => result.rankScore >= 25);
+      state.nutritionLookup.results = filteredResults.slice(0, 8);
+      const weakSources = weakSourceNames(settled, filteredResults);
+      if (weakSources.length) messages.push(`${weakSources.join(", ")} searched but only returned weak or unrelated matches.`);
       if (rankedResults.length && !state.nutritionLookup.results.length) {
         messages.push("Sources searched, but only weak unrelated matches were found.");
       }
@@ -1428,6 +1431,19 @@
       .split(/\s+/)
       .filter((token) => token.length >= 3)
       .filter((token, index, list) => list.indexOf(token) === index);
+  }
+
+  function weakSourceNames(settled, keptResults) {
+    const keptSources = new Set(keptResults.map((result) => sourceGroupName(result.source)));
+    return settled
+      .filter((item) => item.status === "fulfilled" && item.value.results.length)
+      .map((item) => item.value.name)
+      .filter((sourceName) => !keptSources.has(sourceName));
+  }
+
+  function sourceGroupName(source) {
+    if (source === "USDA FoodData Central") return "USDA";
+    return source || "";
   }
 
   function usdaNutrient(food, namePattern, unitName) {
