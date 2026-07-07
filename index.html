@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-8">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-8" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-8">
-  <link rel="stylesheet" href="style.css?v=20260707-8">
+  <link rel="manifest" href="manifest.json?v=20260707-9">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-9" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-9">
+  <link rel="stylesheet" href="style.css?v=20260707-9">
 </head>
 <body>
   <header class="app-header">
@@ -129,7 +129,7 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">PDF bank plus confirmed custom items</p>
-          <h2>Custom Meals</h2>
+          <h2>Custom Foods & Meals</h2>
         </div>
       </div>
 
@@ -153,6 +153,36 @@
             <label class="toggle-row wide-field"><input id="customIngredientVerified" type="checkbox"><span>Confirmed from label or verified source</span></label>
           </div>
           <button id="saveCustomIngredient" class="primary-button" type="button">Save ingredient</button>
+        </section>
+
+        <section class="custom-panel">
+          <h3>Custom Product</h3>
+          <div class="info-band compact-info">Use this for packaged foods or ready portions, for example Futurelife porridge, yoghurt cups, protein bars, or a soup tub. Saved products can be chosen in This Week.</div>
+          <div class="form-grid">
+            <label>Product name<input id="customProductName" class="field" placeholder="e.g. Futurelife porridge"></label>
+            <label>Brand<input id="customProductBrand" class="field" placeholder="Optional"></label>
+            <label>Barcode<input id="customProductBarcode" class="field" inputmode="numeric" placeholder="Optional"></label>
+            <label>Serving size<input id="customProductAmount" class="field" placeholder="e.g. 50 g"></label>
+            <label>Planner slot<select id="customProductType" class="field"></select></label>
+            <label>Shopping category<select id="customProductCategory" class="field"></select></label>
+            <label>Calories<input id="customProductCalories" class="field" type="number" min="0" step="0.1"></label>
+            <label>Protein g<input id="customProductProtein" class="field" type="number" min="0" step="0.1"></label>
+            <label>Carbs g<input id="customProductCarbs" class="field" type="number" min="0" step="0.1"></label>
+            <label>Fat g<input id="customProductFat" class="field" type="number" min="0" step="0.1"></label>
+            <label>Fibre g<input id="customProductFibre" class="field" type="number" min="0" step="0.1"></label>
+            <label>Source<select id="customProductSource" class="field"></select></label>
+            <label class="wide-field">Source link or note<input id="customProductSourceUrl" class="field" placeholder="Optional"></label>
+            <label class="toggle-row wide-field"><input id="customProductVerified" type="checkbox"><span>Confirmed from label or verified source</span></label>
+          </div>
+          <div class="lookup-tools">
+            <button id="findProductNutrition" class="ghost-button" type="button">Find nutrition</button>
+            <label class="lookup-key">USDA key<input id="usdaApiKey" class="field" type="password" autocomplete="off" placeholder="Optional; saved only in this browser"></label>
+            <button id="saveUsdaApiKey" class="ghost-button" type="button">Save key</button>
+          </div>
+          <div id="lookupStatus" class="label-status">Search by product name, brand, or barcode. Open Food Facts works without a key; USDA needs a free API key saved in this browser.</div>
+          <div class="info-band compact-info">MyFitnessPal official API access is not open to this app, so automatic search uses Open Food Facts and USDA. You can still save a manual MyFitnessPal verified entry if you have checked it yourself.</div>
+          <div id="lookupResults" class="lookup-results"></div>
+          <button id="saveCustomProduct" class="primary-button" type="button">Save product</button>
         </section>
 
         <section class="custom-panel">
@@ -213,6 +243,11 @@
             <button id="clearCustomMeal" class="ghost-button" type="button">Clear meal</button>
             <button id="saveCustomMeal" class="primary-button" type="button">Save custom meal</button>
           </div>
+        </section>
+
+        <section class="custom-panel">
+          <h3>Saved Products</h3>
+          <div id="customProductsList" class="custom-list"></div>
         </section>
 
         <section class="custom-panel">
@@ -307,7 +342,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-8"></script>
-  <script src="app.js?v=20260707-8"></script>
+  <script src="data.js?v=20260707-9"></script>
+  <script src="app.js?v=20260707-9"></script>
 </body>
 </html>

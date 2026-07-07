@@ -595,6 +595,37 @@ h3 {
   justify-content: flex-end;
 }
 
+.lookup-tools {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.lookup-key {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lookup-results {
+  display: grid;
+  gap: 10px;
+}
+
+.lookup-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--white);
+}
+
 .macro-edit-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(72px, 1fr));
@@ -1108,7 +1139,9 @@ h3 {
 
   .form-grid,
   .macro-edit-grid,
-  .custom-list-item {
+  .custom-list-item,
+  .lookup-tools,
+  .lookup-result {
     grid-template-columns: 1fr;
   }
 

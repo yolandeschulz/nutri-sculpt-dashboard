@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-8";
+  const APP_VERSION = "20260707-9";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -84,6 +84,26 @@
     customIngredientSourceUrl: document.querySelector("#customIngredientSourceUrl"),
     customIngredientVerified: document.querySelector("#customIngredientVerified"),
     saveCustomIngredient: document.querySelector("#saveCustomIngredient"),
+    customProductName: document.querySelector("#customProductName"),
+    customProductBrand: document.querySelector("#customProductBrand"),
+    customProductBarcode: document.querySelector("#customProductBarcode"),
+    customProductAmount: document.querySelector("#customProductAmount"),
+    customProductType: document.querySelector("#customProductType"),
+    customProductCategory: document.querySelector("#customProductCategory"),
+    customProductCalories: document.querySelector("#customProductCalories"),
+    customProductProtein: document.querySelector("#customProductProtein"),
+    customProductCarbs: document.querySelector("#customProductCarbs"),
+    customProductFat: document.querySelector("#customProductFat"),
+    customProductFibre: document.querySelector("#customProductFibre"),
+    customProductSource: document.querySelector("#customProductSource"),
+    customProductSourceUrl: document.querySelector("#customProductSourceUrl"),
+    customProductVerified: document.querySelector("#customProductVerified"),
+    saveCustomProduct: document.querySelector("#saveCustomProduct"),
+    findProductNutrition: document.querySelector("#findProductNutrition"),
+    usdaApiKey: document.querySelector("#usdaApiKey"),
+    saveUsdaApiKey: document.querySelector("#saveUsdaApiKey"),
+    lookupStatus: document.querySelector("#lookupStatus"),
+    lookupResults: document.querySelector("#lookupResults"),
     ingredientOptions: document.querySelector("#ingredientOptions"),
     customIngredientBank: document.querySelector("#customIngredientBank"),
     labelPhoto: document.querySelector("#labelPhoto"),
@@ -117,6 +137,7 @@
     customMealTotals: document.querySelector("#customMealTotals"),
     saveCustomMeal: document.querySelector("#saveCustomMeal"),
     clearCustomMeal: document.querySelector("#clearCustomMeal"),
+    customProductsList: document.querySelector("#customProductsList"),
     customMealsList: document.querySelector("#customMealsList"),
     toast: document.querySelector("#toast")
   };
@@ -136,10 +157,42 @@
   }
 
   function updateRecipeIndexes() {
+    const customProducts = (state.customProducts || []).map((product, index) => normaliseCustomProduct(product, index));
     const customRecipes = (state.customMeals || []).map((meal, index) => normaliseCustomMeal(meal, index));
-    recipes = [...pdfRecipes, ...customRecipes];
+    recipes = [...pdfRecipes, ...customProducts, ...customRecipes];
     recipeByName = new Map(recipes.map((recipe) => [recipe.name, recipe]));
     types = [...new Set(recipes.map((recipe) => recipe.type))];
+  }
+
+  function normaliseCustomProduct(product, index) {
+    const name = product.name || product.item || `Custom product ${index + 1}`;
+    const amount = product.amount || product.servingSize || "1 serving";
+    return {
+      id: product.id || slug(`product-${index}-${name}`),
+      name,
+      type: product.type && product.type !== "Auto" ? product.type : inferProductType(name),
+      servings: amount,
+      calories: Number(product.calories) || 0,
+      protein_g: Number(product.protein_g) || 0,
+      carbs_g: Number(product.carbs_g) || 0,
+      fat_g: Number(product.fat_g) || 0,
+      fibre_g: Number(product.fibre_g) || 0,
+      ingredients: [{
+        item: name,
+        amount,
+        category: product.category && product.category !== "Auto" ? product.category : inferProductCategory(name),
+        calories: Number(product.calories) || 0,
+        protein_g: Number(product.protein_g) || 0,
+        carbs_g: Number(product.carbs_g) || 0,
+        fat_g: Number(product.fat_g) || 0,
+        fibre_g: Number(product.fibre_g) || 0,
+        source: product.source || "Manual entry - needs review"
+      }],
+      notes: product.brand
+        ? `${product.brand} product. Values are per ${amount}.`
+        : `Custom product. Values are per ${amount}.`,
+      source: "Product"
+    };
   }
 
   function normaliseCustomMeal(meal, index) {
@@ -190,8 +243,15 @@
       reflections: {},
       photoChecks: {},
       customIngredients: [],
+      customProducts: [],
       customMeals: [],
       customMealDraft: [],
+      nutritionLookup: {
+        usdaApiKey: "",
+        results: [],
+        status: "Search by product name, brand, or barcode. Open Food Facts works without a key; USDA needs a free API key saved in this browser.",
+        statusType: "neutral"
+      },
       labelScan: {
         photo: "",
         text: "",
@@ -229,8 +289,10 @@
       reflections: { ...base.reflections, ...(saved.reflections || {}) },
       photoChecks: { ...base.photoChecks, ...(saved.photoChecks || {}) },
       customIngredients: Array.isArray(saved.customIngredients) ? saved.customIngredients : [],
+      customProducts: Array.isArray(saved.customProducts) ? saved.customProducts : [],
       customMeals: Array.isArray(saved.customMeals) ? saved.customMeals : [],
       customMealDraft: Array.isArray(saved.customMealDraft) ? saved.customMealDraft : [],
+      nutritionLookup: { ...base.nutritionLookup, ...(saved.nutritionLookup || {}), results: Array.isArray(saved.nutritionLookup?.results) ? saved.nutritionLookup.results : [] },
       labelScan: { ...base.labelScan, ...(saved.labelScan || {}) }
     };
     cleanupBrokenPlanSlots(merged.plan);
@@ -262,14 +324,23 @@
     if (elements.customIngredientCategory) {
       elements.customIngredientCategory.innerHTML = CATEGORY_ORDER.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("");
     }
+    if (elements.customProductCategory) {
+      elements.customProductCategory.innerHTML = ["Auto", ...CATEGORY_ORDER].map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("");
+    }
     if (elements.mealIngredientCategory) {
       elements.mealIngredientCategory.innerHTML = CATEGORY_ORDER.map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("");
     }
     if (elements.customIngredientSource) {
       elements.customIngredientSource.innerHTML = NUTRITION_SOURCES.map((source) => `<option value="${escapeHtml(source)}">${escapeHtml(source)}</option>`).join("");
     }
+    if (elements.customProductSource) {
+      elements.customProductSource.innerHTML = NUTRITION_SOURCES.filter((source) => source !== "PDF ingredient list").map((source) => `<option value="${escapeHtml(source)}">${escapeHtml(source)}</option>`).join("");
+    }
     if (elements.mealIngredientSource) {
       elements.mealIngredientSource.innerHTML = NUTRITION_SOURCES.map((source) => `<option value="${escapeHtml(source)}">${escapeHtml(source)}</option>`).join("");
+    }
+    if (elements.customProductType) {
+      elements.customProductType.innerHTML = ["Auto", ...SLOTS.flatMap((slot) => slot.types).filter((type, index, list) => list.indexOf(type) === index)].map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("");
     }
     if (elements.customMealType) {
       elements.customMealType.innerHTML = SLOTS.flatMap((slot) => slot.types).filter((type, index, list) => list.indexOf(type) === index).map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("");
@@ -282,6 +353,7 @@
     elements.sortMeals.value = state.sortMeals;
     elements.showAllShopping.checked = state.showAllShopping;
     elements.workoutPhase.value = state.workoutPhase;
+    if (elements.usdaApiKey) elements.usdaApiKey.value = state.nutritionLookup?.usdaApiKey || "";
   }
 
   function attachEvents() {
@@ -359,6 +431,9 @@
     document.querySelector("#printShopping").addEventListener("click", () => printView("shopping"));
     document.querySelector("#copyShopping").addEventListener("click", copyShoppingList);
     elements.saveCustomIngredient?.addEventListener("click", saveCustomIngredientFromForm);
+    elements.saveCustomProduct?.addEventListener("click", saveCustomProductFromForm);
+    elements.findProductNutrition?.addEventListener("click", findProductNutrition);
+    elements.saveUsdaApiKey?.addEventListener("click", saveUsdaApiKey);
     elements.labelPhoto?.addEventListener("change", handleLabelPhotoChange);
     elements.readLabelPhoto?.addEventListener("click", readLabelPhoto);
     elements.useLabelForIngredient?.addEventListener("click", useLabelForIngredient);
@@ -430,6 +505,18 @@
 
       if (target.matches("[data-use-custom-ingredient]")) {
         fillMealIngredientFromBank(target.dataset.useCustomIngredient);
+      }
+
+      if (target.matches("[data-delete-custom-product]")) {
+        deleteCustomProduct(target.dataset.deleteCustomProduct);
+      }
+
+      if (target.matches("[data-use-custom-product]")) {
+        fillMealIngredientFromProduct(target.dataset.useCustomProduct);
+      }
+
+      if (target.matches("[data-use-lookup-result]")) {
+        applyLookupResult(Number(target.dataset.useLookupResult));
       }
     });
   }
@@ -515,7 +602,7 @@
     const selectedRecipe = recipeByName.get(selected);
     const options = recipes
       .filter((recipe) => slot.types.includes(recipe.type))
-      .map((recipe) => `<option value="${escapeHtml(recipe.name)}" ${recipe.name === selected ? "selected" : ""}>${escapeHtml(recipe.name)}${recipe.source === "Custom" ? " (Custom)" : ""}</option>`)
+      .map((recipe) => `<option value="${escapeHtml(recipe.name)}" ${recipe.name === selected ? "selected" : ""}>${escapeHtml(recipe.name)}${recipe.source === "Custom" ? " (Custom)" : recipe.source === "Product" ? " (Product)" : ""}</option>`)
       .join("");
     return `
       <div class="meal-slot">
@@ -582,9 +669,10 @@
             <h3>${escapeHtml(recipe.name)}</h3>
             ${macroHtml(recipe)}
           </div>
-          <span class="type-badge">${escapeHtml(recipe.source === "Custom" ? "Custom" : recipe.type)}</span>
+          <span class="type-badge">${escapeHtml(recipe.source === "Custom" ? "Custom" : recipe.source === "Product" ? "Product" : recipe.type)}</span>
         </div>
         ${recipe.source === "Custom" ? `<p class="item-meta">User-added meal. Source values come from confirmed ingredients.</p>` : ""}
+        ${recipe.source === "Product" ? `<p class="item-meta">User-added product. Values are counted as one selected serving.</p>` : ""}
         <div class="day-macros">Ready from home: ${Math.round(score.score * 100)}% (${score.have}/${score.total} items)</div>
         ${recipe.notes ? `<p class="item-meta">${escapeHtml(recipe.notes)}</p>` : ""}
         <ul class="ingredients">
@@ -716,9 +804,19 @@
       .map((ingredient) => `<option value="${escapeHtml(ingredient.item)}"></option>`)
       .join("");
     elements.customIngredientBank.innerHTML = customIngredientBankHtml();
+    if (elements.customProductsList) {
+      elements.customProductsList.innerHTML = customProductsListHtml();
+    }
     elements.customMealBuilderList.innerHTML = customMealDraftHtml();
     elements.customMealTotals.innerHTML = customMealTotalsHtml(state.customMealDraft || []);
     elements.customMealsList.innerHTML = customMealsListHtml();
+    if (elements.lookupStatus) {
+      elements.lookupStatus.textContent = state.nutritionLookup?.status || "";
+      elements.lookupStatus.className = `label-status ${state.nutritionLookup?.statusType || "neutral"}`;
+    }
+    if (elements.lookupResults) {
+      elements.lookupResults.innerHTML = lookupResultsHtml();
+    }
     if (elements.labelPreview) {
       elements.labelPreview.src = state.labelScan.photo || "";
       elements.labelPreview.hidden = !state.labelScan.photo;
@@ -748,6 +846,46 @@
           <button class="ghost-button small-button" type="button" data-use-custom-ingredient="${escapeHtml(ingredient.id)}">Use</button>
           <button class="ghost-button small-button" type="button" data-delete-custom-ingredient="${escapeHtml(ingredient.id)}">Delete</button>
         </div>
+      </article>
+    `).join("");
+  }
+
+  function customProductsListHtml() {
+    const products = state.customProducts || [];
+    if (!products.length) {
+      return `<div class="empty-panel">No custom products saved yet. Add products like Futurelife, yoghurt cups, bars, or ready portions here.</div>`;
+    }
+    return products.map((product) => {
+      const recipe = normaliseCustomProduct(product, 0);
+      return `
+        <article class="custom-list-item">
+          <div>
+            <strong>${escapeHtml(recipe.name)}</strong>
+            <div class="item-meta">${escapeHtml(product.brand || "No brand")} | ${escapeHtml(recipe.type)} | ${nutritionLine(recipe)}</div>
+            <div class="item-meta">${escapeHtml(product.source || "Manual entry - needs review")}${product.verified ? " | confirmed" : " | needs review"}</div>
+          </div>
+          <div class="custom-actions">
+            <button class="ghost-button small-button" type="button" data-use-custom-product="${escapeHtml(product.id)}">Use in meal</button>
+            <button class="ghost-button small-button" type="button" data-delete-custom-product="${escapeHtml(product.id)}">Delete</button>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
+  function lookupResultsHtml() {
+    const results = state.nutritionLookup?.results || [];
+    if (!results.length) {
+      return `<div class="empty-panel">Search results will appear here. Pick a result to fill the product form, then press Save product.</div>`;
+    }
+    return results.map((result, index) => `
+      <article class="lookup-result">
+        <div>
+          <strong>${escapeHtml(result.name)}</strong>
+          <div class="item-meta">${escapeHtml(result.brand || "No brand")} | ${escapeHtml(result.amount || "100 g")} | ${escapeHtml(result.source)}</div>
+          <div class="item-meta">${nutritionLine(result)}</div>
+        </div>
+        <button class="primary-button small-button" type="button" data-use-lookup-result="${index}">Use values</button>
       </article>
     `).join("");
   }
@@ -833,6 +971,316 @@
     clearCustomIngredientForm();
     saveAndRender(["custom"]);
     toast("Ingredient saved.");
+  }
+
+  function saveCustomProductFromForm() {
+    const product = readProductForm();
+    if (!product.name) {
+      toast("Add a product name first.");
+      return;
+    }
+    if (!hasMacroValues(product)) {
+      toast("Add calories or macros before saving the product.");
+      return;
+    }
+
+    const existing = (state.customProducts || []).findIndex((item) => item.name.toLowerCase() === product.name.toLowerCase());
+    if (existing >= 0) {
+      state.customProducts[existing] = { ...state.customProducts[existing], ...product, id: state.customProducts[existing].id };
+    } else {
+      const safeProduct = { ...product };
+      if (recipeByName.has(safeProduct.name)) {
+        safeProduct.name = uniqueProductName(safeProduct.name);
+      }
+      state.customProducts.push({ ...safeProduct, id: uniqueId("product") });
+    }
+    clearCustomProductForm();
+    updateRecipeIndexes();
+    initialiseControls();
+    saveAndRender();
+    toast(`${product.name} saved. It is now available in This Week.`);
+  }
+
+  function readProductForm() {
+    const name = valueOf(elements.customProductName);
+    const selectedType = valueOf(elements.customProductType);
+    const selectedCategory = valueOf(elements.customProductCategory);
+    return {
+      name,
+      brand: valueOf(elements.customProductBrand),
+      barcode: valueOf(elements.customProductBarcode),
+      amount: valueOf(elements.customProductAmount),
+      type: selectedType && selectedType !== "Auto" ? selectedType : inferProductType(name),
+      category: selectedCategory && selectedCategory !== "Auto" ? selectedCategory : inferProductCategory(name),
+      calories: numberOf(elements.customProductCalories),
+      protein_g: numberOf(elements.customProductProtein),
+      carbs_g: numberOf(elements.customProductCarbs),
+      fat_g: numberOf(elements.customProductFat),
+      fibre_g: numberOf(elements.customProductFibre),
+      source: valueOf(elements.customProductSource) || "Manual entry - needs review",
+      sourceUrl: valueOf(elements.customProductSourceUrl),
+      verified: Boolean(elements.customProductVerified?.checked)
+    };
+  }
+
+  function fillProductForm(product) {
+    if (!product) return;
+    elements.customProductName.value = product.name || product.item || "";
+    elements.customProductBrand.value = product.brand || "";
+    elements.customProductBarcode.value = product.barcode || "";
+    elements.customProductAmount.value = product.amount || product.servingSize || "";
+    elements.customProductType.value = product.type && product.type !== "Auto" ? product.type : inferProductType(product.name || product.item);
+    elements.customProductCategory.value = product.category && product.category !== "Auto" ? product.category : inferProductCategory(product.name || product.item);
+    elements.customProductCalories.value = product.calories ?? "";
+    elements.customProductProtein.value = product.protein_g ?? "";
+    elements.customProductCarbs.value = product.carbs_g ?? "";
+    elements.customProductFat.value = product.fat_g ?? "";
+    elements.customProductFibre.value = product.fibre_g ?? "";
+    elements.customProductSource.value = product.source || "Manual entry - needs review";
+    elements.customProductSourceUrl.value = product.sourceUrl || product.url || "";
+    elements.customProductVerified.checked = Boolean(product.verified);
+  }
+
+  function clearCustomProductForm() {
+    [
+      elements.customProductName,
+      elements.customProductBrand,
+      elements.customProductBarcode,
+      elements.customProductAmount,
+      elements.customProductCalories,
+      elements.customProductProtein,
+      elements.customProductCarbs,
+      elements.customProductFat,
+      elements.customProductFibre,
+      elements.customProductSourceUrl
+    ].forEach((input) => {
+      if (input) input.value = "";
+    });
+    if (elements.customProductType) elements.customProductType.value = "Auto";
+    if (elements.customProductCategory) elements.customProductCategory.value = "Auto";
+    if (elements.customProductSource) elements.customProductSource.value = "Manual entry - needs review";
+    if (elements.customProductVerified) elements.customProductVerified.checked = false;
+  }
+
+  function deleteCustomProduct(id) {
+    const product = (state.customProducts || []).find((item) => item.id === id);
+    state.customProducts = (state.customProducts || []).filter((item) => item.id !== id);
+    if (product) removeMealFromPlans(product.name);
+    updateRecipeIndexes();
+    initialiseControls();
+    saveAndRender();
+    toast("Custom product deleted.");
+  }
+
+  function fillMealIngredientFromProduct(id) {
+    const product = (state.customProducts || []).find((item) => item.id === id);
+    if (!product) return;
+    fillMealIngredientFields(productToIngredient(product));
+    toast("Product ready to add to a custom meal.");
+  }
+
+  function saveUsdaApiKey() {
+    state.nutritionLookup.usdaApiKey = valueOf(elements.usdaApiKey);
+    const message = state.nutritionLookup.usdaApiKey
+      ? "USDA search enabled on this browser."
+      : "USDA key cleared. Open Food Facts will still work.";
+    setNutritionLookupStatus(message, state.nutritionLookup.usdaApiKey ? "success" : "neutral");
+    saveAndRender(["custom"]);
+    toast(message);
+  }
+
+  async function findProductNutrition() {
+    const product = readProductForm();
+    const query = [product.name, product.brand].filter(Boolean).join(" ").trim();
+    const barcode = product.barcode.replace(/\s+/g, "");
+    if (!query && !barcode) {
+      toast("Type a product name or barcode first.");
+      return;
+    }
+
+    state.nutritionLookup.results = [];
+    setNutritionLookupStatus("Searching nutrition sources...", "neutral");
+    renderCustom();
+    elements.findProductNutrition.disabled = true;
+    elements.findProductNutrition.textContent = "Searching...";
+
+    const messages = [];
+    const searches = [searchOpenFoodFacts(query, barcode)];
+    const usdaKey = state.nutritionLookup.usdaApiKey || valueOf(elements.usdaApiKey);
+    if (query && usdaKey) {
+      searches.push(searchUsdaFoods(query, usdaKey));
+    } else if (query) {
+      messages.push("USDA not searched because no API key is saved.");
+    }
+
+    try {
+      const settled = await Promise.allSettled(searches);
+      const results = settled.flatMap((item) => item.status === "fulfilled" ? item.value : []);
+      const failures = settled.filter((item) => item.status === "rejected").length;
+      if (failures) messages.push(`${failures} source could not be reached.`);
+
+      state.nutritionLookup.results = dedupeLookupResults(results).slice(0, 8);
+      if (state.nutritionLookup.results.length) {
+        messages.unshift(`Found ${state.nutritionLookup.results.length} possible match${state.nutritionLookup.results.length === 1 ? "" : "es"}.`);
+        messages.push("MyFitnessPal official API is not connected, so it is not searched automatically.");
+        setNutritionLookupStatus(messages.join(" "), "success");
+      } else {
+        messages.unshift("No reliable nutrition match found. Try a barcode, a more exact brand name, USDA key, or the product label photo.");
+        messages.push("MyFitnessPal official API is not connected, so it is not searched automatically.");
+        setNutritionLookupStatus(messages.join(" "), "warning");
+      }
+    } catch {
+      setNutritionLookupStatus("Nutrition sources could not be searched right now. You can still use the product label photo or manual values.", "warning");
+    } finally {
+      elements.findProductNutrition.disabled = false;
+      elements.findProductNutrition.textContent = "Find nutrition";
+      saveAndRender(["custom"]);
+    }
+  }
+
+  async function searchOpenFoodFacts(query, barcode) {
+    const products = [];
+    if (barcode) {
+      const barcodeUrl = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}?fields=product_name,brands,quantity,serving_size,nutriments,code`;
+      const barcodeJson = await fetchJson(barcodeUrl);
+      if (barcodeJson?.status === 1 && barcodeJson.product) products.push(barcodeJson.product);
+    }
+    if (query) {
+      const searchUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=5&fields=product_name,brands,quantity,serving_size,nutriments,code`;
+      const searchJson = await fetchJson(searchUrl);
+      products.push(...(searchJson?.products || []));
+    }
+    return products.map(productFromOpenFoodFacts).filter(Boolean);
+  }
+
+  async function searchUsdaFoods(query, apiKey) {
+    const url = new URL("https://api.nal.usda.gov/fdc/v1/foods/search");
+    url.searchParams.set("api_key", apiKey);
+    url.searchParams.set("query", query);
+    url.searchParams.set("pageSize", "5");
+    const json = await fetchJson(url.toString());
+    return (json?.foods || []).map(productFromUsdaFood).filter(Boolean);
+  }
+
+  async function fetchJson(url) {
+    const response = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error(`Nutrition lookup failed: ${response.status}`);
+    return response.json();
+  }
+
+  function productFromOpenFoodFacts(product) {
+    const name = String(product.product_name || "").trim();
+    if (!name) return null;
+    const amount = product.serving_size || "100 g";
+    const nutriments = product.nutriments || {};
+    const result = {
+      name,
+      brand: product.brands || "",
+      barcode: product.code || "",
+      amount,
+      type: inferProductType(name),
+      category: inferProductCategory(name),
+      calories: caloriesFromNutriments(nutriments, amount),
+      protein_g: nutrientFromNutriments(nutriments, ["proteins"], amount),
+      carbs_g: nutrientFromNutriments(nutriments, ["carbohydrates"], amount),
+      fat_g: nutrientFromNutriments(nutriments, ["fat"], amount),
+      fibre_g: nutrientFromNutriments(nutriments, ["fiber", "fibre"], amount),
+      source: "Open Food Facts",
+      sourceUrl: product.code ? `https://world.openfoodfacts.org/product/${encodeURIComponent(product.code)}` : "https://world.openfoodfacts.org",
+      verified: true
+    };
+    return hasMacroValues(result) ? result : null;
+  }
+
+  function productFromUsdaFood(food) {
+    const name = String(food.description || "").trim();
+    if (!name) return null;
+    const calories = usdaNutrient(food, /energy/i, "KCAL")
+      || Math.round((usdaNutrient(food, /energy/i, "KJ") || 0) / 4.184);
+    const result = {
+      name,
+      brand: food.brandOwner || food.brandName || "",
+      barcode: "",
+      amount: "100 g",
+      type: inferProductType(name),
+      category: inferProductCategory(name),
+      calories,
+      protein_g: usdaNutrient(food, /^protein$/i),
+      carbs_g: usdaNutrient(food, /carbohydrate/i),
+      fat_g: usdaNutrient(food, /total lipid|fat/i),
+      fibre_g: usdaNutrient(food, /fiber|fibre/i),
+      source: "USDA FoodData Central",
+      sourceUrl: food.fdcId ? `https://fdc.nal.usda.gov/fdc-app.html#/food-details/${food.fdcId}/nutrients` : "https://fdc.nal.usda.gov",
+      verified: true
+    };
+    return hasMacroValues(result) ? result : null;
+  }
+
+  function usdaNutrient(food, namePattern, unitName) {
+    const nutrient = (food.foodNutrients || []).find((item) => {
+      const matchesName = namePattern.test(item.nutrientName || "");
+      const matchesUnit = !unitName || String(item.unitName || "").toUpperCase() === unitName;
+      return matchesName && matchesUnit;
+    });
+    return nutrient ? round(numberFromValue(nutrient.value)) : 0;
+  }
+
+  function caloriesFromNutriments(nutriments, amount) {
+    const kcal = nutrientFromNutriments(nutriments, ["energy-kcal"], amount);
+    if (kcal) return Math.round(kcal);
+    const kj = nutrientFromNutriments(nutriments, ["energy-kj", "energy"], amount);
+    return kj ? Math.round(kj / 4.184) : 0;
+  }
+
+  function nutrientFromNutriments(nutriments, keys, amount) {
+    for (const key of keys) {
+      const perServing = nutrimentNumber(nutriments, [`${key}_serving`, `${key}-serving`]);
+      if (perServing != null) return round(perServing);
+      const per100g = nutrimentNumber(nutriments, [`${key}_100g`, `${key}-100g`]);
+      if (per100g != null) {
+        const grams = servingGramsFromText(amount);
+        return grams ? round((per100g * grams) / 100) : round(per100g);
+      }
+    }
+    return 0;
+  }
+
+  function nutrimentNumber(nutriments, keys) {
+    for (const key of keys) {
+      const value = numberFromValue(nutriments[key]);
+      if (Number.isFinite(value) && value > 0) return value;
+    }
+    return null;
+  }
+
+  function servingGramsFromText(text) {
+    const match = String(text || "").match(/(\d+(?:[.,]\d+)?)\s*(g|gram|grams|ml|mℓ)/i);
+    return match ? numberFromValue(match[1]) : 0;
+  }
+
+  function dedupeLookupResults(results) {
+    const seen = new Set();
+    return results.filter((result) => {
+      const key = `${result.source}|${result.name}|${result.brand}|${result.amount}`.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return hasMacroValues(result);
+    });
+  }
+
+  function applyLookupResult(index) {
+    const result = state.nutritionLookup?.results?.[index];
+    if (!result) return;
+    fillProductForm(result);
+    setNutritionLookupStatus("Values filled into the product form. Check the serving size, then press Save product.", "success");
+    saveAndRender(["custom"]);
+    toast("Product values filled.");
+  }
+
+  function setNutritionLookupStatus(message, type) {
+    state.nutritionLookup = state.nutritionLookup || {};
+    state.nutritionLookup.status = message;
+    state.nutritionLookup.statusType = type || "neutral";
   }
 
   function readIngredientForm(prefix) {
@@ -1308,7 +1756,8 @@
     const workoutCount = completedWorkoutDaysForWeek();
     const todayTotals = sumMacros(selectedMealsForDay(state.todayDay));
 
-    elements.statMeals.textContent = `${pdfRecipes.length}${state.customMeals.length ? ` + ${state.customMeals.length}` : ""}`;
+    const customCount = (state.customProducts?.length || 0) + (state.customMeals?.length || 0);
+    elements.statMeals.textContent = `${pdfRecipes.length}${customCount ? ` + ${customCount}` : ""}`;
     elements.statShopping.textContent = needCount;
     elements.statRules.textContent = `${dailyPercent}%`;
     elements.statWorkouts.textContent = `${workoutCount}/3`;
@@ -1399,6 +1848,10 @@
     for (const ingredient of state.customIngredients || []) {
       map.set(ingredient.item, ingredient);
     }
+    for (const product of state.customProducts || []) {
+      const ingredient = productToIngredient(product);
+      map.set(ingredient.item, ingredient);
+    }
     return [...map.values()].sort((a, b) => a.item.localeCompare(b.item));
   }
 
@@ -1442,7 +1895,9 @@
   }
 
   function mealNameWithSource(recipe) {
-    const badge = recipe.source === "Custom" ? ` <span class="source-badge">Custom</span>` : "";
+    const badge = recipe.source === "Custom" || recipe.source === "Product"
+      ? ` <span class="source-badge">${escapeHtml(recipe.source)}</span>`
+      : "";
     return `${escapeHtml(recipe.name)}${badge}`;
   }
 
@@ -1564,6 +2019,54 @@
       index += 1;
     }
     return candidate;
+  }
+
+  function uniqueProductName(name) {
+    const trimmed = name.trim();
+    if (!recipeByName.has(trimmed)) return trimmed;
+    let candidate = `${trimmed} - product`;
+    let index = 2;
+    while (recipeByName.has(candidate)) {
+      candidate = `${trimmed} - product ${index}`;
+      index += 1;
+    }
+    return candidate;
+  }
+
+  function productToIngredient(product) {
+    return {
+      item: product.name || product.item || "",
+      brand: product.brand || "",
+      amount: product.amount || product.servingSize || "1 serving",
+      category: product.category && product.category !== "Auto" ? product.category : inferProductCategory(product.name || product.item),
+      calories: Number(product.calories) || 0,
+      protein_g: Number(product.protein_g) || 0,
+      carbs_g: Number(product.carbs_g) || 0,
+      fat_g: Number(product.fat_g) || 0,
+      fibre_g: Number(product.fibre_g) || 0,
+      source: product.source || "Manual entry - needs review",
+      sourceUrl: product.sourceUrl || "",
+      verified: Boolean(product.verified)
+    };
+  }
+
+  function inferProductType(name) {
+    const text = String(name || "").toLowerCase();
+    if (/porridge|oats|cereal|futurelife|muesli|granola|weet-?bix|breakfast/.test(text)) return "Breakfast";
+    if (/yoghurt|yogurt|protein|biltong|egg|cheese|cottage|tuna|chicken/.test(text)) return "High Protein Snack";
+    if (/bar|fruit|cracker|rice cake|popcorn|snack/.test(text)) return "Carb Snack";
+    if (/meal|wrap|soup|salad|bowl|pasta|rice/.test(text)) return "Lunch or Dinner";
+    return "Breakfast";
+  }
+
+  function inferProductCategory(name) {
+    const text = String(name || "").toLowerCase();
+    if (/yoghurt|yogurt|milk|cheese|cottage/.test(text)) return "Dairy";
+    if (/chicken|beef|biltong|egg|tuna|fish|protein/.test(text)) return "Protein";
+    if (/fruit|apple|banana|berry|vegetable|veg|salad/.test(text)) return "Fruit and veg";
+    if (/porridge|oats|cereal|futurelife|muesli|granola|bread|wrap|rice|pasta|cracker|bar|cake/.test(text)) return "Carbs";
+    if (/sauce|dressing|mayo|mayonnaise/.test(text)) return "Sauces";
+    return "Pantry";
   }
 
   function hasMacroValues(ingredient) {
