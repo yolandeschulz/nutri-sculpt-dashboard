@@ -513,6 +513,12 @@ h3 {
   border: 1px solid #efd072;
 }
 
+.compact-info {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
 .custom-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);

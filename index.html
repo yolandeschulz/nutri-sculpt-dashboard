@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-5">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-5" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-5">
-  <link rel="stylesheet" href="style.css?v=20260707-5">
+  <link rel="manifest" href="manifest.json?v=20260707-6">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-6" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-6">
+  <link rel="stylesheet" href="style.css?v=20260707-6">
 </head>
 <body>
   <header class="app-header">
@@ -157,13 +157,14 @@
 
         <section class="custom-panel">
           <h3>Nutrition Label Photo</h3>
+          <div class="info-band compact-info">For multi-language labels, the reader uses the English row name before the first slash and prefers the per-serving column. A straight, close-up photo of only the nutrition table works best; if the photo is angled or blurry, type the English serving values below.</div>
           <input id="labelPhoto" class="field" type="file" accept="image/*" capture="environment">
           <img id="labelPreview" class="label-preview" alt="Nutrition label preview" hidden>
           <div class="inline-controls">
             <button id="readLabelPhoto" class="ghost-button" type="button">Read label</button>
             <button id="useLabelForIngredient" class="primary-button" type="button">Use values</button>
           </div>
-          <textarea id="labelOcrText" class="notes-box" rows="7" placeholder="Extracted nutrition text appears here. You can also type the label values here."></textarea>
+          <textarea id="labelOcrText" class="notes-box" rows="7" placeholder="English-only nutrition text appears here. If the photo is unclear, type the serving values from the label here."></textarea>
         </section>
 
         <section class="custom-panel span-two">
@@ -289,7 +290,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-5"></script>
-  <script src="app.js?v=20260707-5"></script>
+  <script src="data.js?v=20260707-6"></script>
+  <script src="app.js?v=20260707-6"></script>
 </body>
 </html>

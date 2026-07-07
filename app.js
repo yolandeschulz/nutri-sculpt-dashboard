@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-5";
+  const APP_VERSION = "20260707-6";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -951,11 +951,21 @@
     elements.readLabelPhoto.textContent = "Reading...";
     try {
       await loadTesseract();
-      const result = await window.Tesseract.recognize(file, "eng");
-      state.labelScan.text = result?.data?.text || "";
-      applyParsedNutrition(parseNutritionText(state.labelScan.text));
+      const ocrImage = await prepareLabelImageForOcr(file);
+      const result = await window.Tesseract.recognize(ocrImage, "eng", {
+        tessedit_pageseg_mode: "6",
+        preserve_interword_spaces: "1"
+      });
+      const rawText = result?.data?.text || "";
+      state.labelScan.text = englishOnlyNutritionText(rawText);
+      const parsed = parseNutritionText(rawText);
+      if (hasEnoughParsedNutrition(parsed)) {
+        applyParsedNutrition(parsed);
+      } else {
+        toast("Label text was unclear. Please type or correct the English values before saving.");
+      }
       saveAndRender(["custom"]);
-      toast("Label read. Please confirm the values.");
+      if (hasEnoughParsedNutrition(parsed)) toast("Label read. Please confirm the values.");
     } catch {
       toast("Could not read the photo. Type the label values manually.");
     } finally {
@@ -972,18 +982,138 @@
     toast("Values copied into ingredient form for review.");
   }
 
+  function hasEnoughParsedNutrition(parsed) {
+    if (!parsed) return false;
+    const coreFields = ["calories", "protein_g", "carbs_g", "fat_g", "fibre_g"];
+    const filled = coreFields.filter((field) => parsed[field] != null && parsed[field] !== "").length;
+    return Boolean(parsed.calories) || filled >= 3;
+  }
+
   function applyParsedNutrition(parsed) {
     if (!parsed) return;
+    if (parsed.servingSize && !elements.customIngredientAmount.value) {
+      elements.customIngredientAmount.value = parsed.servingSize;
+    }
     if (parsed.calories != null) elements.customIngredientCalories.value = parsed.calories;
     if (parsed.protein_g != null) elements.customIngredientProtein.value = parsed.protein_g;
     if (parsed.carbs_g != null) elements.customIngredientCarbs.value = parsed.carbs_g;
     if (parsed.fat_g != null) elements.customIngredientFat.value = parsed.fat_g;
     if (parsed.fibre_g != null) elements.customIngredientFibre.value = parsed.fibre_g;
     elements.customIngredientSource.value = "Product nutrition label";
+    if (parsed.sourceNote && !elements.customIngredientSourceUrl.value) {
+      elements.customIngredientSourceUrl.value = parsed.sourceNote;
+    }
     elements.customIngredientVerified.checked = false;
   }
 
   function parseNutritionText(text) {
+    const cleanText = englishOnlyNutritionText(text);
+    const lines = cleanText.split(/\n|;/).map((line) => line.trim()).filter(Boolean);
+    const joined = lines.join("\n");
+    const servingSize = extractServingSize(joined);
+    const preferredColumn = preferredNutritionColumn(joined);
+    const parsed = { servingSize };
+
+    for (const line of lines) {
+      const label = nutritionLabelForLine(line);
+      if (!label || /per\s+100|%|nrv|vitamins?/i.test(label)) continue;
+
+      if (/^energy\b/.test(label)) {
+        parsed.calories = energyCaloriesFromLine(line, preferredColumn);
+      } else if (/^protein\b/.test(label)) {
+        parsed.protein_g = selectedNutrientValue(line, preferredColumn);
+      } else if (/^(glycaemic\s+)?carbohydrate\b|^carbs\b/.test(label)) {
+        parsed.carbs_g = selectedNutrientValue(line, preferredColumn);
+      } else if (/^(total\s+)?fat\b/.test(label) && !/saturated|trans|polyunsaturated|monounsaturated|omega/i.test(label)) {
+        parsed.fat_g = selectedNutrientValue(line, preferredColumn);
+      } else if (/^(dietary\s+)?fib(?:re|er)\b/.test(label)) {
+        parsed.fibre_g = selectedNutrientValue(line, preferredColumn);
+      }
+    }
+
+    if (servingSize) {
+      parsed.sourceNote = `English rows only; values copied from ${preferredColumn === 1 ? "per-serving" : "first"} nutrition column (${servingSize}).`;
+    } else {
+      parsed.sourceNote = `English rows only; values copied from ${preferredColumn === 1 ? "per-serving" : "first"} nutrition column.`;
+    }
+    return parsed;
+  }
+
+  function englishOnlyNutritionText(text) {
+    return String(text || "")
+      .replace(/,/g, ".")
+      .split(/\n|;/)
+      .map((line) => englishOnlyNutritionLine(line))
+      .filter(Boolean)
+      .join("\n");
+  }
+
+  function englishOnlyNutritionLine(line) {
+    const cleaned = String(line || "").replace(/\s+/g, " ").trim();
+    if (!cleaned) return "";
+    const firstUnit = cleaned.search(/\b(?:kj|kcal|calories|g|mg|µg|ug)\b|\d/i);
+    if (firstUnit < 0) return cleaned.split("/")[0].trim();
+    const labelPart = cleaned.slice(0, firstUnit).trim();
+    const valuePart = cleaned.slice(firstUnit).trim();
+    const englishLabel = labelPart.includes("/") ? labelPart.split("/")[0].trim() : labelPart;
+    return `${englishLabel} ${valuePart}`.replace(/\s+/g, " ").trim();
+  }
+
+  function nutritionLabelForLine(line) {
+    const beforeValues = String(line || "").split(/\b(?:kj|kcal|calories|g|mg|µg|ug)\b|\d/i)[0] || "";
+    return beforeValues
+      .replace(/[^a-z\s-]/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function extractServingSize(text) {
+    const serving = String(text || "").match(/serving\s+size\s*(\d+(?:\.\d+)?)\s*(g|ml|mℓ|oz|cup|cups|slice|slices|serving)/i)
+      || String(text || "").match(/per\s*(\d+(?:\.\d+)?)\s*(g|ml|mℓ|oz|cup|cups|slice|slices)\s*(?:serving)?/i);
+    return serving ? `${numberFromValue(serving[1])} ${serving[2].replace("mℓ", "ml")}` : "";
+  }
+
+  function preferredNutritionColumn(text) {
+    const hasPer100 = /(?:per\s*)?100\s*(?:g|ml|mℓ)/i.test(text);
+    const hasServingColumn = /(?:per\s*)?(?!100\b)\d+(?:\.\d+)?\s*(?:g|ml|mℓ|oz|cup|cups|slice|slices)\s*(?:serving)/i.test(text)
+      || /per\s+serving/i.test(text);
+    const hasServingSize = /serving\s+size\s*\d+(?:\.\d+)?\s*(?:g|ml|mℓ|oz|cup|cups|slice|slices)/i.test(text);
+    return hasPer100 && (hasServingColumn || hasServingSize) ? 1 : 0;
+  }
+
+  function energyCaloriesFromLine(line, preferredColumn) {
+    const lower = String(line || "").toLowerCase();
+    if (lower.includes("kcal") || lower.includes("calories")) {
+      const kcalStart = lower.includes("kcal") ? lower.indexOf("kcal") : lower.indexOf("calories");
+      const kcalValues = nutritionNumbers(line.slice(kcalStart));
+      const kcal = pickColumnValue(kcalValues, preferredColumn);
+      if (kcal != null) return Math.round(kcal);
+    }
+    const energy = selectedNutrientValue(line, preferredColumn);
+    if (energy == null) return null;
+    return lower.includes("kj") ? Math.round(energy / 4.184) : Math.round(energy);
+  }
+
+  function selectedNutrientValue(line, preferredColumn) {
+    const values = nutritionNumbers(line);
+    const value = pickColumnValue(values, preferredColumn);
+    return value == null ? null : round(value);
+  }
+
+  function pickColumnValue(values, preferredColumn) {
+    if (!values.length) return null;
+    if (preferredColumn === 1 && values.length > 1) return values[1];
+    return values[0];
+  }
+
+  function nutritionNumbers(line) {
+    return String(line || "")
+      .replace(/\b(\d{1,2})\s+(\d{3})(?=\D|$)/g, "$1$2")
+      .match(/\d+(?:\.\d+)?/g)?.map(numberFromValue) || [];
+  }
+
+  function parseNutritionTextLegacy(text) {
     const lines = String(text || "").replace(/,/g, ".").split(/\n|;/).map((line) => line.trim()).filter(Boolean);
     const joined = lines.join("\n");
     return {
@@ -995,6 +1125,38 @@
       fat_g: parseFirstNumber(joined, /(?:total\s+fat|fat)[^\d]*(\d+(?:\.\d+)?)/i),
       fibre_g: parseFirstNumber(joined, /(?:fibre|fiber)[^\d]*(\d+(?:\.\d+)?)/i)
     };
+  }
+
+  function prepareLabelImageForOcr(file) {
+    return new Promise((resolve) => {
+      const image = new Image();
+      const url = URL.createObjectURL(file);
+      image.addEventListener("load", () => {
+        const scale = Math.max(1, Math.min(2, 1800 / Math.max(1, image.width)));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(image.width * scale);
+        canvas.height = Math.round(image.height * scale);
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+        for (let index = 0; index < pixels.length; index += 4) {
+          const grey = pixels[index] * 0.299 + pixels[index + 1] * 0.587 + pixels[index + 2] * 0.114;
+          const contrast = Math.max(0, Math.min(255, (grey - 128) * 1.7 + 128));
+          pixels[index] = contrast;
+          pixels[index + 1] = contrast;
+          pixels[index + 2] = contrast;
+        }
+        context.putImageData(imageData, 0, 0);
+        URL.revokeObjectURL(url);
+        canvas.toBlob((blob) => resolve(blob || file), "image/png");
+      });
+      image.addEventListener("error", () => {
+        URL.revokeObjectURL(url);
+        resolve(file);
+      });
+      image.src = url;
+    });
   }
 
   function parseFirstNumber(text, pattern) {
