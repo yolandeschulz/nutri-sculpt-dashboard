@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-9">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-9" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-9">
-  <link rel="stylesheet" href="style.css?v=20260707-9">
+  <link rel="manifest" href="manifest.json?v=20260707-10">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-10" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-10">
+  <link rel="stylesheet" href="style.css?v=20260707-10">
 </head>
 <body>
   <header class="app-header">
@@ -175,12 +175,18 @@
             <label class="toggle-row wide-field"><input id="customProductVerified" type="checkbox"><span>Confirmed from label or verified source</span></label>
           </div>
           <div class="lookup-tools">
-            <button id="findProductNutrition" class="ghost-button" type="button">Find nutrition</button>
+            <button id="findProductNutrition" class="ghost-button" type="button">Run safe lookup</button>
             <label class="lookup-key">USDA key<input id="usdaApiKey" class="field" type="password" autocomplete="off" placeholder="Optional; saved only in this browser"></label>
             <button id="saveUsdaApiKey" class="ghost-button" type="button">Save key</button>
           </div>
           <div id="lookupStatus" class="label-status">Search by product name, brand, or barcode. Open Food Facts works without a key; USDA needs a free API key saved in this browser.</div>
-          <div class="info-band compact-info">MyFitnessPal official API access is not open to this app, so automatic search uses Open Food Facts and USDA. You can still save a manual MyFitnessPal verified entry if you have checked it yourself.</div>
+          <div class="safe-source-grid">
+            <div><strong>1. Saved foods</strong><span>Checks anything already confirmed in this app.</span></div>
+            <div><strong>2. Open Food Facts</strong><span>Best for barcodes and packaged products.</span></div>
+            <div><strong>3. USDA</strong><span>Good for common foods; brand matches need review.</span></div>
+            <div><strong>4. Label photo</strong><span>Best fallback for local products.</span></div>
+          </div>
+          <div class="info-band compact-info">MyFitnessPal stays manual-only because there is no open approved API for this app. If you check it yourself, save it as a manual verified entry.</div>
           <div id="lookupResults" class="lookup-results"></div>
           <button id="saveCustomProduct" class="primary-button" type="button">Save product</button>
         </section>
@@ -205,12 +211,18 @@
               <label>Fat g<input id="manualFat" class="field" type="number" min="0" step="0.1"></label>
               <label>Fibre g<input id="manualFibre" class="field" type="number" min="0" step="0.1"></label>
             </div>
-            <button id="useManualLabelValues" class="primary-button" type="button">Fill ingredient form</button>
+            <div class="inline-controls label-fill-actions">
+              <button id="useManualLabelForProduct" class="primary-button" type="button">Fill product form</button>
+              <button id="useManualLabelValues" class="ghost-button" type="button">Fill ingredient form</button>
+            </div>
           </div>
           <details class="ocr-details">
             <summary>Show raw OCR text</summary>
             <textarea id="labelOcrText" class="notes-box" rows="6" placeholder="Raw OCR text appears here only for troubleshooting. Use the per-serving boxes above for unclear photos."></textarea>
-            <button id="useLabelForIngredient" class="ghost-button" type="button">Try values from OCR text</button>
+            <div class="inline-controls label-fill-actions ocr-actions">
+              <button id="useLabelForProduct" class="ghost-button" type="button">Try OCR for product</button>
+              <button id="useLabelForIngredient" class="ghost-button" type="button">Try OCR for ingredient</button>
+            </div>
           </details>
         </section>
 
@@ -342,7 +354,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-9"></script>
-  <script src="app.js?v=20260707-9"></script>
+  <script src="data.js?v=20260707-10"></script>
+  <script src="app.js?v=20260707-10"></script>
 </body>
 </html>

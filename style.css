@@ -626,6 +626,68 @@ h3 {
   background: var(--white);
 }
 
+.recommended-result {
+  border-color: rgba(104, 163, 87, 0.6);
+  box-shadow: 0 12px 30px rgba(104, 163, 87, 0.15);
+}
+
+.lookup-confidence {
+  margin-top: 6px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.lookup-confidence.high {
+  background: var(--green-soft);
+  color: #2c5a24;
+}
+
+.lookup-confidence.medium {
+  background: var(--gold-soft);
+  color: #72590d;
+}
+
+.lookup-confidence.review {
+  background: var(--rose);
+  color: #8a392c;
+}
+
+.safe-source-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.safe-source-grid div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--pale);
+}
+
+.safe-source-grid strong {
+  color: var(--deep);
+}
+
+.safe-source-grid span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.label-fill-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ocr-actions {
+  padding: 0 12px 12px;
+}
+
 .macro-edit-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(72px, 1fr));
@@ -1141,7 +1203,9 @@ h3 {
   .macro-edit-grid,
   .custom-list-item,
   .lookup-tools,
-  .lookup-result {
+  .lookup-result,
+  .safe-source-grid,
+  .label-fill-actions {
     grid-template-columns: 1fr;
   }
 
