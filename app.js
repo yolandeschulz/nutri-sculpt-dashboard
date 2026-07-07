@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-15";
+  const APP_VERSION = "20260707-16";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -46,6 +46,9 @@
 
   const elements = {
     activeWeek: document.querySelector("#activeWeek"),
+    exportState: document.querySelector("#exportState"),
+    importState: document.querySelector("#importState"),
+    importStateFile: document.querySelector("#importStateFile"),
     todayDay: document.querySelector("#todayDay"),
     todayTitle: document.querySelector("#todayTitle"),
     todayMeals: document.querySelector("#todayMeals"),
@@ -440,6 +443,9 @@
     document.querySelector("#updateApp").addEventListener("click", () => {
       updateAppFiles();
     });
+    elements.exportState?.addEventListener("click", exportSavedDashboard);
+    elements.importState?.addEventListener("click", () => elements.importStateFile?.click());
+    elements.importStateFile?.addEventListener("change", importSavedDashboard);
 
     document.querySelector("#printToday").addEventListener("click", () => printView("today"));
     document.querySelector("#printWeek").addEventListener("click", () => printView("week"));
@@ -2519,6 +2525,64 @@
         // The dashboard still works if a browser blocks local service workers.
       });
     });
+  }
+
+  function exportSavedDashboard() {
+    const exportedState = JSON.parse(JSON.stringify(state));
+    if (exportedState.nutritionLookup) {
+      exportedState.nutritionLookup.usdaApiKey = "";
+    }
+    const payload = {
+      app: "nutri-sculpt-dashboard",
+      version: APP_VERSION,
+      exportedAt: new Date().toISOString(),
+      state: exportedState
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const date = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `nutri-sculpt-saved-data-${date}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast("Saved dashboard exported. Send that file to your mom.");
+  }
+
+  function importSavedDashboard(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const imported = JSON.parse(String(reader.result || "{}"));
+        const importedState = imported.state || imported;
+        if (!importedState || typeof importedState !== "object" || !importedState.plan) {
+          throw new Error("Not a dashboard save file.");
+        }
+        if (!confirm("Import this saved dashboard? It will replace the saved data on this browser.")) {
+          event.target.value = "";
+          return;
+        }
+        const savedUsdaApiKey = state.nutritionLookup?.usdaApiKey || valueOf(elements.usdaApiKey);
+        state = mergeState(defaultState(), importedState);
+        if (savedUsdaApiKey) {
+          state.nutritionLookup.usdaApiKey = savedUsdaApiKey;
+        }
+        saveState();
+        updateRecipeIndexes();
+        initialiseControls();
+        saveAndRender();
+        toast("Saved dashboard imported.");
+      } catch {
+        toast("Could not import that file.");
+      } finally {
+        event.target.value = "";
+      }
+    };
+    reader.readAsText(file);
   }
 
   async function updateAppFiles() {
