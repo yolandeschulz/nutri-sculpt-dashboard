@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-21";
+  const APP_VERSION = "20260707-22";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
@@ -2037,8 +2037,10 @@
         preserve_interword_spaces: "1"
       });
       const rawText = result?.data?.text || "";
-      state.labelScan.text = englishOnlyNutritionText(rawText);
-      const parsed = parseNutritionText(rawText);
+      const structuredText = structuredOcrTableText(result?.data);
+      const scanText = [rawText, structuredText].filter(Boolean).join("\n");
+      state.labelScan.text = englishOnlyNutritionText(scanText);
+      const parsed = parseNutritionText(scanText);
       if (hasEnoughParsedNutrition(parsed)) {
         applyParsedNutrition(parsed);
         fillManualLabelFields(parsed);
@@ -2266,20 +2268,28 @@
     const preferredColumn = preferredNutritionColumn(joined);
     const parsed = { servingSize };
 
+    let sawSugarAfterCarbs = false;
     for (const line of lines) {
-      const label = nutritionLabelForLine(line);
+      let label = nutritionLabelForLine(line);
       if (!label || /per\s+100|%|nrv|vitamins?/i.test(label)) continue;
+      if (/sugar/i.test(label) && parsed.carbs_g != null) {
+        sawSugarAfterCarbs = true;
+        continue;
+      }
+      if (!/^energy|^protein|carbohydrate|^carbs|fat|fib/i.test(label) && sawSugarAfterCarbs && parsed.fat_g == null && likelyMangledFatRow(line)) {
+        label = "total fat";
+      }
 
       if (/^energy\b/.test(label)) {
-        parsed.calories = energyCaloriesFromLine(line, preferredColumn);
-      } else if (/^protein\b/.test(label)) {
-        parsed.protein_g = selectedNutrientValue(line, preferredColumn);
-      } else if (/^(glycaemic\s+)?carbohydrate\b|^carbs\b/.test(label)) {
-        parsed.carbs_g = selectedNutrientValue(line, preferredColumn);
-      } else if (/^(total\s+)?fat\b/.test(label) && !/saturated|trans|polyunsaturated|monounsaturated|omega/i.test(label)) {
-        parsed.fat_g = selectedNutrientValue(line, preferredColumn);
-      } else if (/^(dietary\s+)?fib(?:re|er)\b/.test(label)) {
-        parsed.fibre_g = selectedNutrientValue(line, preferredColumn);
+        if (parsed.calories == null) parsed.calories = energyCaloriesFromLine(line, preferredColumn);
+      } else if (/^protein\b/.test(label) && parsed.protein_g == null) {
+        parsed.protein_g = selectedNutrientValue(line, preferredColumn, "protein", servingSize);
+      } else if (/^(glycaemic\s+)?carbohydrate\b|^carbs\b/.test(label) && parsed.carbs_g == null) {
+        parsed.carbs_g = selectedNutrientValue(line, preferredColumn, "carbs", servingSize);
+      } else if (/^(total\s+)?fat\b/.test(label) && parsed.fat_g == null && !/saturated|saurated|trans|polyunsaturated|monounsaturated|omega/i.test(label)) {
+        parsed.fat_g = selectedNutrientValue(line, preferredColumn, "fat", servingSize);
+      } else if (/^(dietary\s+)?fib(?:re|er)\b/.test(label) && parsed.fibre_g == null) {
+        parsed.fibre_g = selectedNutrientValue(line, preferredColumn, "fibre", servingSize);
       }
     }
 
@@ -2289,6 +2299,55 @@
       parsed.sourceNote = `English rows only; values copied from ${preferredColumn === 1 ? "per-serving" : "first"} nutrition column.`;
     }
     return parsed;
+  }
+
+  function structuredOcrTableText(data) {
+    const wordRows = ocrWordRows(data);
+    const lineRows = Array.isArray(data?.lines)
+      ? data.lines.map((line) => String(line.text || "").trim()).filter(Boolean)
+      : [];
+    return [...lineRows, ...wordRows].filter(Boolean).join("\n");
+  }
+
+  function ocrWordRows(data) {
+    const words = Array.isArray(data?.words) ? data.words.map(normaliseOcrWord).filter(Boolean) : [];
+    if (!words.length) return [];
+    const heights = words.map((word) => word.height).filter((height) => height > 0).sort((a, b) => a - b);
+    const medianHeight = heights[Math.floor(heights.length / 2)] || 18;
+    const threshold = Math.max(8, medianHeight * 0.8);
+    const rows = [];
+
+    words.sort((a, b) => a.y - b.y || a.x - b.x).forEach((word) => {
+      let row = rows.find((candidate) => Math.abs(candidate.y - word.y) <= threshold);
+      if (!row) {
+        row = { y: word.y, words: [] };
+        rows.push(row);
+      }
+      row.words.push(word);
+      row.y = row.words.reduce((total, item) => total + item.y, 0) / row.words.length;
+    });
+
+    return rows
+      .sort((a, b) => a.y - b.y)
+      .map((row) => row.words.sort((a, b) => a.x - b.x).map((word) => word.text).join(" ").replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+  }
+
+  function normaliseOcrWord(word) {
+    const text = String(word?.text || "").trim();
+    if (!text) return null;
+    const box = word.bbox || word;
+    const x0 = Number(box.x0 ?? box.left ?? word.x0);
+    const y0 = Number(box.y0 ?? box.top ?? word.y0);
+    const x1 = Number(box.x1 ?? (Number.isFinite(x0) ? x0 + Number(box.width || 0) : NaN));
+    const y1 = Number(box.y1 ?? (Number.isFinite(y0) ? y0 + Number(box.height || 0) : NaN));
+    if (![x0, y0, x1, y1].every(Number.isFinite)) return null;
+    return {
+      text,
+      x: x0,
+      y: (y0 + y1) / 2,
+      height: Math.max(1, y1 - y0)
+    };
   }
 
   function englishOnlyNutritionText(text) {
@@ -2312,6 +2371,18 @@
   }
 
   function nutritionLabelForLine(line) {
+    const normalised = String(line || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9.<\s|]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (/\benergy\b/.test(normalised)) return "energy";
+    if (/\bprotein\b/.test(normalised)) return "protein";
+    if (/glyca?emic\s+carbohydrate|\bcarbohydrate\b|\bcarbs\b/.test(normalised)) return "glycaemic carbohydrate";
+    if (/\bsugar\b/.test(normalised)) return "sugar";
+    if (/\bfib(?:re|er)\b|\bfibre\b|\bfiber\b/.test(normalised)) return "dietary fibre";
+    if (/\bsaturated\b|saurated|\btrans\b|\bmono(?:un)?saturated\b|\bpoly(?:un)?saturated\b|\bomega\b/.test(normalised)) return normalised;
+    if (/\btotal\s+fat\b|\bfat\b/.test(normalised)) return "total fat";
     const beforeValues = String(line || "").split(/\b(?:kj|kcal|calories|g|mg|µg|ug)\b|\d/i)[0] || "";
     return beforeValues
       .replace(/[^a-z\s-]/gi, " ")
@@ -2321,9 +2392,12 @@
   }
 
   function extractServingSize(text) {
-    const serving = String(text || "").match(/serving\s+size\s*(\d+(?:\.\d+)?)\s*(g|ml|mℓ|oz|cup|cups|slice|slices|serving)/i)
+    const source = String(text || "");
+    const serving = source.match(/serving\s+size\s*(\d+(?:\.\d+)?)\s*(g|ml|mℓ|oz|cup|cups|slice|slices|serving)/i)
+      || source.match(/(\d{2,4})\s*(g|9)?\s*\[?\s*per\s+serving/i)
+      || String(text || "").match(/per\s+serving\s*(\d+(?:\.\d+)?)\s*(g|ml|mℓ|oz|cup|cups|slice|slices)/i)
       || String(text || "").match(/per\s*(\d+(?:\.\d+)?)\s*(g|ml|mℓ|oz|cup|cups|slice|slices)\s*(?:serving)?/i);
-    return serving ? `${numberFromValue(serving[1])} ${serving[2].replace("mℓ", "ml")}` : "";
+    return serving ? `${normalisedServingAmount(serving[1])} ${normalisedServingUnit(serving[2])}` : "";
   }
 
   function preferredNutritionColumn(text) {
@@ -2347,10 +2421,12 @@
     return lower.includes("kj") ? Math.round(energy / 4.184) : Math.round(energy);
   }
 
-  function selectedNutrientValue(line, preferredColumn) {
-    const values = nutritionNumbers(line);
-    const value = pickColumnValue(values, preferredColumn);
-    return value == null ? null : round(value);
+  function selectedNutrientValue(line, preferredColumn, nutrient, servingSize) {
+    const values = nutritionNumbers(nutrientNumberText(line, nutrient));
+    let value = pickColumnValue(values, preferredColumn);
+    if (value == null) return null;
+    value = repairOcrDecimalValue(line, values, value, preferredColumn, nutrient, servingSize);
+    return round(value);
   }
 
   function pickColumnValue(values, preferredColumn) {
@@ -2363,6 +2439,54 @@
     return String(line || "")
       .replace(/\b(\d{1,2})\s+(\d{3})(?=\D|$)/g, "$1$2")
       .match(/\d+(?:\.\d+)?/g)?.map(numberFromValue) || [];
+  }
+
+  function nutrientNumberText(line, nutrient) {
+    const text = String(line || "");
+    const patterns = {
+      protein: /protein/i,
+      carbs: /glyca?emic\s+carbohydrate|carbohydrate|carbs/i,
+      fat: /total\s+fat|fat/i,
+      fibre: /fib(?:re|er)|fibre|fiber/i
+    };
+    const pattern = patterns[nutrient];
+    if (!pattern) return text;
+    const match = text.match(pattern);
+    return match?.index != null ? text.slice(match.index) : text;
+  }
+
+  function likelyMangledFatRow(line) {
+    const lower = String(line || "").toLowerCase();
+    if (/satur|trans|mono|poly|omega|cholesterol|sodium|calcium|fib|sugar|protein|carbohydrate|energy/.test(lower)) return false;
+    return nutritionNumbers(line).length >= 2;
+  }
+
+  function repairOcrDecimalValue(line, values, value, preferredColumn, nutrient, servingSize) {
+    const text = String(line || "");
+    if (/\./.test(text)) return value;
+    if (nutrient === "fat" && value >= 10 && value < 100) {
+      return value / 10;
+    }
+    if (nutrient === "fibre" && /</.test(text) && preferredColumn === 1 && values[0] >= 10 && value < 10) {
+      const servingGrams = servingGramsFromText(servingSize);
+      return servingGrams ? (values[0] / 10) * (servingGrams / 100) : value / 10;
+    }
+    return value;
+  }
+
+  function normalisedServingAmount(rawValue) {
+    let amount = numberFromValue(rawValue);
+    const compact = String(rawValue || "").replace(/\D/g, "");
+    if (amount >= 1000 && /9$/.test(compact)) {
+      amount = Math.floor(amount / 10);
+    }
+    return round(amount);
+  }
+
+  function normalisedServingUnit(rawUnit) {
+    const unit = String(rawUnit || "g").toLowerCase();
+    if (unit === "9") return "g";
+    return unit.replace("mℓ", "ml");
   }
 
   function parseNutritionTextLegacy(text) {
