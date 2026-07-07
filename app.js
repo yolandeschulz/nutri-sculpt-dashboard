@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-18";
+  const APP_VERSION = "20260707-19";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
@@ -149,6 +149,7 @@
     useManualLabelForProduct: document.querySelector("#useManualLabelForProduct"),
     customMealName: document.querySelector("#customMealName"),
     customMealType: document.querySelector("#customMealType"),
+    customMealServings: document.querySelector("#customMealServings"),
     customMealNotes: document.querySelector("#customMealNotes"),
     pdfSwapMeal: document.querySelector("#pdfSwapMeal"),
     startSwapMeal: document.querySelector("#startSwapMeal"),
@@ -174,6 +175,9 @@
   };
 
   let state = loadState();
+  let editingCustomIngredientId = "";
+  let editingCustomProductId = "";
+  let editingCustomMealId = "";
   updateRecipeIndexes();
 
   window.nutriSculptPickMeal = handlePlanSlotChange;
@@ -297,6 +301,7 @@
       workoutPhase: "Week 1-2",
       macroTargets: { ...DEFAULT_MACRO_TARGETS },
       plan,
+      servings: {},
       ingredients: {},
       daily: {},
       notes: {},
@@ -352,6 +357,7 @@
       reflections: { ...base.reflections, ...(saved.reflections || {}) },
       photoChecks: { ...base.photoChecks, ...(saved.photoChecks || {}) },
       macroTargets: normaliseMacroTargets(saved.macroTargets || base.macroTargets),
+      servings: { ...base.servings, ...(saved.servings || {}) },
       customIngredients: Array.isArray(saved.customIngredients) ? saved.customIngredients : [],
       customProducts: Array.isArray(saved.customProducts) ? saved.customProducts : [],
       customMeals: Array.isArray(saved.customMeals) ? saved.customMeals : [],
@@ -468,10 +474,7 @@
   function attachEvents() {
     document.querySelectorAll(".tab").forEach((button) => {
       button.addEventListener("click", () => {
-        document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
-        document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
-        button.classList.add("active");
-        document.querySelector(`#view-${button.dataset.view}`).classList.add("active");
+        showView(button.dataset.view);
       });
     });
 
@@ -573,12 +576,14 @@
     elements.saveCustomIngredient?.addEventListener("click", saveCustomIngredientFromForm);
     elements.clearCustomIngredient?.addEventListener("click", () => {
       clearCustomIngredientForm();
+      editingCustomIngredientId = "";
       saveAndRender(["custom"]);
       toast("Ingredient form cleared.");
     });
     elements.saveCustomProduct?.addEventListener("click", saveCustomProductFromForm);
     elements.clearCustomProduct?.addEventListener("click", () => {
       clearCustomProductForm();
+      editingCustomProductId = "";
       setNutritionLookupStatus("Product form cleared. Your USDA key is still saved on this browser.", "neutral");
       saveAndRender(["custom"]);
       toast("Product form cleared.");
@@ -609,6 +614,10 @@
       const target = event.target;
       if (target.matches("[data-plan-slot]")) {
         handlePlanSlotChange(target);
+      }
+
+      if (target.matches("[data-serving-slot]")) {
+        handleServingChange(target);
       }
 
       if (target.matches("[data-ingredient-status]")) {
@@ -661,8 +670,16 @@
         deleteCustomMeal(target.dataset.deleteCustomMeal);
       }
 
+      if (target.matches("[data-edit-custom-meal]")) {
+        editCustomMeal(target.dataset.editCustomMeal);
+      }
+
       if (target.matches("[data-delete-custom-ingredient]")) {
         deleteCustomIngredient(target.dataset.deleteCustomIngredient);
+      }
+
+      if (target.matches("[data-edit-custom-ingredient]")) {
+        editCustomIngredient(target.dataset.editCustomIngredient);
       }
 
       if (target.matches("[data-use-custom-ingredient]")) {
@@ -671,6 +688,10 @@
 
       if (target.matches("[data-delete-custom-product]")) {
         deleteCustomProduct(target.dataset.deleteCustomProduct);
+      }
+
+      if (target.matches("[data-edit-custom-product]")) {
+        editCustomProduct(target.dataset.editCustomProduct);
       }
 
       if (target.matches("[data-use-custom-product]")) {
@@ -683,6 +704,11 @@
     });
   }
 
+  function showView(viewName) {
+    document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.view === viewName));
+    document.querySelectorAll(".view").forEach((view) => view.classList.toggle("active", view.id === `view-${viewName}`));
+  }
+
   function handlePlanSlotChange(target) {
     const day = target.dataset.day;
     const slot = target.dataset.planSlot;
@@ -690,11 +716,26 @@
     ensurePlanDay(state.activeWeek, day);
     const changed = state.plan[state.activeWeek][day][slot] !== target.value;
     state.plan[state.activeWeek][day][slot] = target.value;
+    if (changed) delete state.servings[servingKey(state.activeWeek, day, slot)];
     const recipe = recipeByName.get(target.value);
     saveAndRender(["today", "week", "shopping", "meals", "stats"]);
     if (recipe && changed) {
       toast(`${recipe.name} added to ${day}. Shopping list updated.`);
     }
+  }
+
+  function handleServingChange(target) {
+    const day = target.dataset.day;
+    const slot = target.dataset.servingSlot;
+    if (!day || !slot) return;
+    const key = servingKey(state.activeWeek, day, slot);
+    const value = valueOf(target);
+    if (value) {
+      state.servings[key] = value;
+    } else {
+      delete state.servings[key];
+    }
+    saveAndRender(["today", "week", "shopping", "stats"]);
   }
 
   function saveAndRender(parts) {
@@ -723,11 +764,13 @@
     elements.todayNotes.value = state.notes[noteKey()] || "";
     elements.todayMeals.innerHTML = SLOTS.map((slot) => {
       const recipe = recipeByName.get(plan[slot.key]);
+      const scaledRecipe = recipe ? scaledRecipeForSlot(day, slot.key) : null;
       return `
         <article class="summary-tile">
           <strong>${escapeHtml(slot.label)}</strong>
           <div>${recipe ? mealNameWithSource(recipe) : "Choose in This Week"}</div>
-          ${recipe ? macroHtml(recipe) : ""}
+          ${recipe ? servingOverrideHtml(day, slot, recipe) : ""}
+          ${scaledRecipe ? macroHtml(scaledRecipe) : ""}
         </article>
       `;
     }).join("");
@@ -748,7 +791,7 @@
     elements.weekGrid.innerHTML = DAYS.map((day) => {
       ensurePlanDay(state.activeWeek, day);
       const dayPlan = state.plan[state.activeWeek][day];
-      const meals = SLOTS.map((slot) => recipeByName.get(dayPlan[slot.key])).filter(Boolean);
+      const meals = selectedMealsForDay(day);
       const macros = sumMacros(meals);
       return `
         <article class="day-card">
@@ -773,19 +816,32 @@
           <option value="">Choose</option>
           ${options}
         </select>
-        ${selectedRecipe ? selectedMealPreviewHtml(selectedRecipe) : emptyMealPreviewHtml(slot)}
+        ${selectedRecipe ? selectedMealPreviewHtml(selectedRecipe, day, slot) : emptyMealPreviewHtml(slot)}
       </div>
     `;
   }
 
-  function selectedMealPreviewHtml(recipe) {
+  function selectedMealPreviewHtml(recipe, day, slot) {
+    const scaledRecipe = scaledRecipeForSlot(day, slot.key) || recipe;
     const ingredients = (recipe.ingredients || []).slice(0, 4).map((ingredient) => ingredient.item).join(", ");
     return `
       <div class="selected-meal-preview is-filled" aria-live="polite">
         <strong>${mealNameWithSource(recipe)}</strong>
-        ${macroHtml(recipe)}
+        ${servingOverrideHtml(day, slot, recipe)}
+        ${macroHtml(scaledRecipe)}
         <span class="item-meta">Shopping added: ${escapeHtml(ingredients)}${(recipe.ingredients || []).length > 4 ? "..." : ""}</span>
       </div>
+    `;
+  }
+
+  function servingOverrideHtml(day, slot, recipe) {
+    const current = servingValue(day, slot.key);
+    const placeholder = servingPlaceholder(recipe);
+    return `
+      <label class="serving-override">
+        <span>Serving used</span>
+        <input class="field mini-field" data-serving-slot="${escapeHtml(slot.key)}" data-day="${escapeHtml(day)}" value="${escapeHtml(current)}" placeholder="${escapeHtml(placeholder)}">
+      </label>
     `;
   }
 
@@ -831,10 +887,14 @@
             <h3>${escapeHtml(recipe.name)}</h3>
             ${macroHtml(recipe)}
           </div>
-          <span class="type-badge">${escapeHtml(recipe.source === "Custom" ? "Custom" : recipe.source === "Product" ? "Product" : recipe.type)}</span>
+          <div class="meal-card-actions">
+            ${mealCardEditButton(recipe)}
+            <span class="type-badge">${escapeHtml(recipe.source === "Custom" || recipe.source === "Product" || recipe.source === "Ingredient" ? recipe.source : recipe.type)}</span>
+          </div>
         </div>
         ${recipe.source === "Custom" ? `<p class="item-meta">User-added meal. Source values come from confirmed ingredients.</p>` : ""}
         ${recipe.source === "Product" ? `<p class="item-meta">User-added product. Values are counted as one selected serving.</p>` : ""}
+        ${recipe.source === "Ingredient" ? `<p class="item-meta">User-added ingredient. Edit its serving size and macros from Custom.</p>` : ""}
         <div class="day-macros">Ready from home: ${Math.round(score.score * 100)}% (${score.have}/${score.total} items)</div>
         ${recipe.notes ? `<p class="item-meta">${escapeHtml(recipe.notes)}</p>` : ""}
         <ul class="ingredients">
@@ -842,6 +902,19 @@
         </ul>
       </article>
     `;
+  }
+
+  function mealCardEditButton(recipe) {
+    if (recipe.source === "Custom") {
+      return `<button class="ghost-button small-button" type="button" data-edit-custom-meal="${escapeHtml(recipe.id)}">Edit</button>`;
+    }
+    if (recipe.source === "Product") {
+      return `<button class="ghost-button small-button" type="button" data-edit-custom-product="${escapeHtml(recipe.id)}">Edit</button>`;
+    }
+    if (recipe.source === "Ingredient") {
+      return `<button class="ghost-button small-button" type="button" data-edit-custom-ingredient="${escapeHtml(recipe.id)}">Edit</button>`;
+    }
+    return "";
   }
 
   function ingredientRowHtml(ingredient, editable) {
@@ -1009,6 +1082,7 @@
         </div>
         <div class="custom-actions">
           <button class="ghost-button small-button" type="button" data-use-custom-ingredient="${escapeHtml(ingredient.id)}">Use</button>
+          <button class="ghost-button small-button" type="button" data-edit-custom-ingredient="${escapeHtml(ingredient.id)}">Edit</button>
           <button class="ghost-button small-button" type="button" data-delete-custom-ingredient="${escapeHtml(ingredient.id)}">Delete</button>
         </div>
       </article>
@@ -1031,6 +1105,7 @@
           </div>
           <div class="custom-actions">
             <button class="ghost-button small-button" type="button" data-use-custom-product="${escapeHtml(product.id)}">Use in meal</button>
+            <button class="ghost-button small-button" type="button" data-edit-custom-product="${escapeHtml(product.id)}">Edit</button>
             <button class="ghost-button small-button" type="button" data-delete-custom-product="${escapeHtml(product.id)}">Delete</button>
           </div>
         </article>
@@ -1131,7 +1206,10 @@
             <div class="item-meta">${escapeHtml(recipe.type)} | ${nutritionLine(recipe)}</div>
             <div class="item-meta">${escapeHtml((recipe.ingredients || []).map((ingredient) => ingredient.item).join(", "))}</div>
           </div>
-          <button class="ghost-button small-button" type="button" data-delete-custom-meal="${escapeHtml(meal.id)}">Delete</button>
+          <div class="custom-actions">
+            <button class="ghost-button small-button" type="button" data-edit-custom-meal="${escapeHtml(meal.id)}">Edit</button>
+            <button class="ghost-button small-button" type="button" data-delete-custom-meal="${escapeHtml(meal.id)}">Delete</button>
+          </div>
         </article>
       `;
     }).join("");
@@ -1147,8 +1225,20 @@
       toast("Add calories or macros before saving.");
       return;
     }
+    const editingIndex = editingCustomIngredientId
+      ? (state.customIngredients || []).findIndex((item) => item.id === editingCustomIngredientId)
+      : -1;
     const existing = (state.customIngredients || []).findIndex((item) => item.item.toLowerCase() === ingredient.item.toLowerCase());
-    if (existing >= 0) {
+    if (editingIndex >= 0) {
+      const previous = state.customIngredients[editingIndex];
+      const safeIngredient = { ...ingredient };
+      if (safeIngredient.item !== previous.item && recipeByName.has(safeIngredient.item)) {
+        safeIngredient.item = uniqueIngredientName(safeIngredient.item);
+      }
+      state.customIngredients[editingIndex] = { ...previous, ...safeIngredient, id: previous.id };
+      replaceMealInPlans(previous.item, safeIngredient.item);
+      editingCustomIngredientId = "";
+    } else if (existing >= 0) {
       state.customIngredients[existing] = { ...state.customIngredients[existing], ...ingredient, id: state.customIngredients[existing].id };
     } else {
       const safeIngredient = { ...ingredient };
@@ -1164,6 +1254,30 @@
     toast(`${ingredient.item} saved. It is now available in Other.`);
   }
 
+  function editCustomIngredient(id) {
+    const ingredient = (state.customIngredients || []).find((item) => item.id === id);
+    if (!ingredient) return;
+    editingCustomIngredientId = id;
+    fillCustomIngredientForm(ingredient);
+    showView("custom");
+    toast("Ingredient loaded. Edit the form, then press Save ingredient.");
+  }
+
+  function fillCustomIngredientForm(ingredient) {
+    elements.customIngredientName.value = ingredient.item || ingredient.name || "";
+    elements.customIngredientBrand.value = ingredient.brand || "";
+    elements.customIngredientAmount.value = ingredient.amount || "";
+    elements.customIngredientCategory.value = ingredient.category || "Protein";
+    elements.customIngredientCalories.value = ingredient.calories ?? "";
+    elements.customIngredientProtein.value = ingredient.protein_g ?? "";
+    elements.customIngredientCarbs.value = ingredient.carbs_g ?? "";
+    elements.customIngredientFat.value = ingredient.fat_g ?? "";
+    elements.customIngredientFibre.value = ingredient.fibre_g ?? "";
+    elements.customIngredientSource.value = ingredient.source || "Manual entry - needs review";
+    elements.customIngredientSourceUrl.value = ingredient.sourceUrl || "";
+    elements.customIngredientVerified.checked = Boolean(ingredient.verified);
+  }
+
   function saveCustomProductFromForm() {
     const product = readProductForm();
     if (!product.name) {
@@ -1175,8 +1289,20 @@
       return;
     }
 
+    const editingIndex = editingCustomProductId
+      ? (state.customProducts || []).findIndex((item) => item.id === editingCustomProductId)
+      : -1;
     const existing = (state.customProducts || []).findIndex((item) => item.name.toLowerCase() === product.name.toLowerCase());
-    if (existing >= 0) {
+    if (editingIndex >= 0) {
+      const previous = state.customProducts[editingIndex];
+      const safeProduct = { ...product };
+      if (safeProduct.name !== previous.name && recipeByName.has(safeProduct.name)) {
+        safeProduct.name = uniqueProductName(safeProduct.name);
+      }
+      state.customProducts[editingIndex] = { ...previous, ...safeProduct, id: previous.id };
+      replaceMealInPlans(previous.name, safeProduct.name);
+      editingCustomProductId = "";
+    } else if (existing >= 0) {
       state.customProducts[existing] = { ...state.customProducts[existing], ...product, id: state.customProducts[existing].id };
     } else {
       const safeProduct = { ...product };
@@ -1190,6 +1316,15 @@
     initialiseControls();
     saveAndRender();
     toast(`${product.name} saved. It is now available in This Week.`);
+  }
+
+  function editCustomProduct(id) {
+    const product = (state.customProducts || []).find((item) => item.id === id);
+    if (!product) return;
+    editingCustomProductId = id;
+    fillProductForm(product);
+    showView("custom");
+    toast("Product loaded. Edit the form, then press Save product.");
   }
 
   function readProductForm() {
@@ -1700,23 +1835,54 @@
       toast("Add at least one ingredient.");
       return;
     }
-    const safeName = uniqueMealName(name);
+    const editingIndex = editingCustomMealId
+      ? (state.customMeals || []).findIndex((item) => item.id === editingCustomMealId)
+      : -1;
+    const previous = editingIndex >= 0 ? state.customMeals[editingIndex] : null;
+    let safeName = name;
+    if (!previous || previous.name !== name) {
+      safeName = uniqueMealName(name);
+    }
     const meal = {
-      id: uniqueId("meal"),
+      id: previous?.id || uniqueId("meal"),
       name: safeName,
       type: valueOf(elements.customMealType) || "Lunch or Dinner",
-      servings: "1",
+      servings: valueOf(elements.customMealServings) || "1 serving",
       notes: valueOf(elements.customMealNotes),
       ingredients: state.customMealDraft.map(({ id, ...ingredient }) => ingredient)
     };
-    state.customMeals.push(meal);
+    if (editingIndex >= 0) {
+      state.customMeals[editingIndex] = meal;
+      replaceMealInPlans(previous.name, meal.name);
+      editingCustomMealId = "";
+    } else {
+      state.customMeals.push(meal);
+    }
     state.customMealDraft = [];
     elements.customMealName.value = "";
+    elements.customMealServings.value = "";
     elements.customMealNotes.value = "";
     updateRecipeIndexes();
     initialiseControls();
     saveAndRender();
     toast(`${safeName} saved. It is now in the planner.`);
+  }
+
+  function editCustomMeal(id) {
+    const meal = (state.customMeals || []).find((item) => item.id === id);
+    if (!meal) return;
+    editingCustomMealId = id;
+    elements.customMealName.value = meal.name || "";
+    elements.customMealType.value = meal.type || "Lunch or Dinner";
+    elements.customMealServings.value = meal.servings || "1 serving";
+    elements.customMealNotes.value = meal.notes || "";
+    state.customMealDraft = (meal.ingredients || []).map((ingredient) => ({
+      ...ingredient,
+      id: uniqueId("draft")
+    }));
+    saveAndRender(["custom"]);
+    showView("custom");
+    toast("Meal loaded. Edit the ingredients, then press Save meal.");
   }
 
   function startSwapMealFromPdf() {
@@ -1731,6 +1897,7 @@
     state.customMealDraft = [];
     elements.customMealName.value = `${recipe.name} - actual version`;
     elements.customMealType.value = recipe.type || "Breakfast";
+    elements.customMealServings.value = recipe.servings || "1 serving";
     elements.customMealNotes.value = `Started from PDF meal "${recipe.name}". Original PDF total was ${nutritionLine(recipe)}. Actual macros below come only from the products/ingredients added because the PDF does not split macros per component.`;
     saveAndRender(["custom"]);
     toast("Now add the products she actually ate, then save the custom meal.");
@@ -1751,8 +1918,10 @@
   function clearCustomMealDraft() {
     state.customMealDraft = [];
     if (elements.customMealName) elements.customMealName.value = "";
+    if (elements.customMealServings) elements.customMealServings.value = "";
     if (elements.customMealNotes) elements.customMealNotes.value = "";
     if (elements.pdfSwapMeal) elements.pdfSwapMeal.value = "";
+    editingCustomMealId = "";
     clearMealIngredientForm();
     saveAndRender(["custom"]);
     toast("Custom meal form cleared.");
@@ -2226,8 +2395,7 @@
   }
 
   function aggregateShopping(scope) {
-    const selected = selectedRecipeNamesForWeek();
-    const included = scope === "all" ? recipes : recipes.filter((recipe) => selected.includes(recipe.name));
+    const included = scope === "all" ? recipes : selectedRecipesForWeek();
     const map = new Map();
     for (const recipe of included) {
       for (const ingredient of recipe.ingredients || []) {
@@ -2266,10 +2434,101 @@
     return [...names];
   }
 
+  function selectedRecipesForWeek() {
+    const selected = [];
+    const weekPlan = state.plan[state.activeWeek] || {};
+    for (const day of DAYS) {
+      const dayPlan = weekPlan[day] || {};
+      for (const slot of SLOTS) {
+        const recipe = recipeByName.get(dayPlan[slot.key]);
+        if (recipe) selected.push(scaledRecipeForSlot(day, slot.key) || recipe);
+      }
+    }
+    return selected;
+  }
+
   function selectedMealsForDay(day) {
     ensurePlanDay(state.activeWeek, day);
     const dayPlan = state.plan[state.activeWeek][day] || {};
-    return SLOTS.map((slot) => recipeByName.get(dayPlan[slot.key])).filter(Boolean);
+    return SLOTS.map((slot) => {
+      const recipe = recipeByName.get(dayPlan[slot.key]);
+      return recipe ? scaledRecipeForSlot(day, slot.key) : null;
+    }).filter(Boolean);
+  }
+
+  function scaledRecipeForSlot(day, slotKey) {
+    ensurePlanDay(state.activeWeek, day);
+    const recipe = recipeByName.get(state.plan[state.activeWeek][day]?.[slotKey]);
+    if (!recipe) return null;
+    return scaleRecipe(recipe, servingFactor(recipe, servingValue(day, slotKey)));
+  }
+
+  function servingValue(day, slotKey) {
+    return state.servings?.[servingKey(state.activeWeek, day, slotKey)] || "";
+  }
+
+  function servingKey(week, day, slotKey) {
+    return `${week}|${day}|${slotKey}`;
+  }
+
+  function servingPlaceholder(recipe) {
+    const base = recipe.servings || recipe.ingredients?.[0]?.amount || "1 serving";
+    return base && base !== "1" ? `default ${base}` : "e.g. 50%, 0.5 serving, 40 g";
+  }
+
+  function servingFactor(recipe, servingText) {
+    const text = String(servingText || "").trim().toLowerCase();
+    if (!text) return 1;
+    const percent = text.match(/(\d+(?:[.,]\d+)?)\s*%/);
+    if (percent) return positiveFactor(numberFromValue(percent[1]) / 100);
+    const multiplier = text.match(/(\d+(?:[.,]\d+)?)\s*x/);
+    if (multiplier) return positiveFactor(numberFromValue(multiplier[1]));
+    const serving = text.match(/(\d+(?:[.,]\d+)?)\s*(serving|servings|portion|portions)/);
+    if (serving) return positiveFactor(numberFromValue(serving[1]));
+    const targetGrams = servingGramsFromText(text);
+    const baseGrams = recipeServingGrams(recipe);
+    if (targetGrams && baseGrams) return positiveFactor(targetGrams / baseGrams);
+    const plainNumber = numberFromValue(text);
+    if (plainNumber > 0 && baseGrams && plainNumber > 10) return positiveFactor(plainNumber / baseGrams);
+    if (plainNumber > 0 && plainNumber <= 10) return positiveFactor(plainNumber);
+    return 1;
+  }
+
+  function positiveFactor(value) {
+    return Number.isFinite(value) && value > 0 ? value : 1;
+  }
+
+  function recipeServingGrams(recipe) {
+    return servingGramsFromText(recipe.servings) || servingGramsFromText(recipe.ingredients?.[0]?.amount);
+  }
+
+  function scaleRecipe(recipe, factor) {
+    const safeFactor = positiveFactor(factor);
+    if (safeFactor === 1) return recipe;
+    return {
+      ...recipe,
+      calories: round((Number(recipe.calories) || 0) * safeFactor),
+      protein_g: round((Number(recipe.protein_g) || 0) * safeFactor),
+      carbs_g: round((Number(recipe.carbs_g) || 0) * safeFactor),
+      fat_g: round((Number(recipe.fat_g) || 0) * safeFactor),
+      fibre_g: round((Number(recipe.fibre_g) || 0) * safeFactor),
+      ingredients: (recipe.ingredients || []).map((ingredient) => ({
+        ...ingredient,
+        amount: scaledAmountText(ingredient.amount, safeFactor),
+        calories: round((Number(ingredient.calories) || 0) * safeFactor),
+        protein_g: round((Number(ingredient.protein_g) || 0) * safeFactor),
+        carbs_g: round((Number(ingredient.carbs_g) || 0) * safeFactor),
+        fat_g: round((Number(ingredient.fat_g) || 0) * safeFactor),
+        fibre_g: round((Number(ingredient.fibre_g) || 0) * safeFactor)
+      }))
+    };
+  }
+
+  function scaledAmountText(amount, factor) {
+    const text = String(amount || "");
+    const match = text.match(/(\d+(?:[.,]\d+)?)\s*(g|gram|grams|ml|mℓ)/i);
+    if (!match) return text;
+    return text.replace(match[0], `${round(numberFromValue(match[1]) * factor)} ${match[2]}`);
   }
 
   function dailyTotalsHtml(day) {
@@ -2481,10 +2740,24 @@
   }
 
   function removeMealFromPlans(name) {
+    for (const [week, weekPlan] of Object.entries(state.plan || {})) {
+      for (const [day, dayPlan] of Object.entries(weekPlan || {})) {
+        for (const slot of SLOTS) {
+          if (dayPlan[slot.key] === name) {
+            dayPlan[slot.key] = "";
+            delete state.servings?.[servingKey(week, day, slot.key)];
+          }
+        }
+      }
+    }
+  }
+
+  function replaceMealInPlans(oldName, newName) {
+    if (!oldName || !newName || oldName === newName) return;
     for (const weekPlan of Object.values(state.plan || {})) {
       for (const dayPlan of Object.values(weekPlan || {})) {
         for (const slot of SLOTS) {
-          if (dayPlan[slot.key] === name) dayPlan[slot.key] = "";
+          if (dayPlan[slot.key] === oldName) dayPlan[slot.key] = newName;
         }
       }
     }

@@ -487,6 +487,17 @@ h3 {
   color: var(--deep);
 }
 
+.serving-override {
+  display: grid;
+  gap: 4px;
+}
+
+.serving-override span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .day-macros {
   padding: 10px;
   background: var(--mint);
@@ -899,6 +910,14 @@ h3 {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+.meal-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .type-badge {
