@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-20";
+  const APP_VERSION = "20260707-21";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
@@ -231,7 +231,7 @@
 
   function normaliseCustomProduct(product, index) {
     const name = product.name || product.item || `Custom product ${index + 1}`;
-    const amount = product.amount || product.servingSize || "1 serving";
+    const amount = product.amount || product.servings || product.servingSize || "1 serving";
     return {
       id: product.id || slug(`product-${index}-${name}`),
       name,
@@ -777,7 +777,6 @@
         <article class="summary-tile">
           <strong>${escapeHtml(slot.label)}</strong>
           <div>${recipe ? mealNameWithSource(recipe) : "Choose in This Week"}</div>
-          ${recipe ? servingOverrideHtml(day, slot, recipe) : ""}
           ${scaledRecipe ? macroHtml(scaledRecipe) : ""}
         </article>
       `;
@@ -845,11 +844,15 @@
   function servingOverrideHtml(day, slot, recipe) {
     const current = servingValue(day, slot.key);
     const placeholder = servingPlaceholder(recipe);
+    const summary = current ? `Serving: ${current}` : `Serving: ${servingDefaultText(recipe)}`;
     return `
-      <label class="serving-override">
-        <span>Serving used</span>
-        <input class="field mini-field" data-serving-slot="${escapeHtml(slot.key)}" data-day="${escapeHtml(day)}" value="${escapeHtml(current)}" placeholder="${escapeHtml(placeholder)}">
-      </label>
+      <details class="serving-override">
+        <summary>${escapeHtml(summary)}</summary>
+        <label>
+          <span>Change for this day</span>
+          <input class="field mini-field" data-serving-slot="${escapeHtml(slot.key)}" data-day="${escapeHtml(day)}" value="${escapeHtml(current)}" placeholder="${escapeHtml(placeholder)}">
+        </label>
+      </details>
     `;
   }
 
@@ -1085,7 +1088,7 @@
       <article class="custom-list-item">
         <div>
           <strong>${escapeHtml(ingredient.item)}</strong>
-          <div class="item-meta">${escapeHtml(ingredient.amount || "serving")} | ${nutritionLine(ingredient)}</div>
+          <div class="item-meta">Serving: ${escapeHtml(ingredient.amount || "1 serving")} | ${nutritionLine(ingredient)}</div>
           <div class="item-meta">${escapeHtml(ingredient.source || "Manual entry - needs review")}${ingredient.verified ? " | confirmed" : " | needs review"}</div>
         </div>
         <div class="custom-actions">
@@ -1108,7 +1111,7 @@
         <article class="custom-list-item">
           <div>
             <strong>${escapeHtml(recipe.name)}</strong>
-            <div class="item-meta">${escapeHtml(product.brand || "No brand")} | ${escapeHtml(recipe.type)} | ${nutritionLine(recipe)}</div>
+            <div class="item-meta">${escapeHtml(product.brand || "No brand")} | ${escapeHtml(recipe.type)} | Serving: ${escapeHtml(recipe.servings || product.amount || "1 serving")} | ${nutritionLine(recipe)}</div>
             <div class="item-meta">${escapeHtml(product.source || "Manual entry - needs review")}${product.verified ? " | confirmed" : " | needs review"}</div>
             <div class="saved-product-controls">
               <label>
@@ -1237,7 +1240,7 @@
         <article class="custom-list-item">
           <div>
             <strong>${escapeHtml(recipe.name)}</strong>
-            <div class="item-meta">${escapeHtml(recipe.type)} | ${nutritionLine(recipe)}</div>
+            <div class="item-meta">${escapeHtml(recipe.type)} | Serving: ${escapeHtml(recipe.servings || "1 serving")} | ${nutritionLine(recipe)}</div>
             <div class="item-meta">${escapeHtml((recipe.ingredients || []).map((ingredient) => ingredient.item).join(", "))}</div>
           </div>
           <div class="custom-actions">
@@ -2527,6 +2530,10 @@
   function servingPlaceholder(recipe) {
     const base = recipe.servings || recipe.ingredients?.[0]?.amount || "1 serving";
     return base && base !== "1" ? `default ${base}` : "e.g. 50%, 0.5 serving, 40 g";
+  }
+
+  function servingDefaultText(recipe) {
+    return recipe.servings || recipe.ingredients?.[0]?.amount || "default";
   }
 
   function servingFactor(recipe, servingText) {

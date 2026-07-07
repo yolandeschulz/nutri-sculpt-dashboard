@@ -342,6 +342,7 @@ h3 {
 .macro {
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
   min-height: 26px;
   padding: 4px 8px;
   border-radius: 999px;
@@ -349,6 +350,11 @@ h3 {
   color: var(--deep);
   font-size: 12px;
   font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.item-meta {
+  overflow-wrap: anywhere;
 }
 
 .notes-label {
@@ -430,6 +436,7 @@ h3 {
 .day-card {
   display: grid;
   gap: 10px;
+  min-width: 0;
   padding: 14px;
   border-radius: var(--radius);
   background: var(--white);
@@ -452,6 +459,7 @@ h3 {
 .meal-slot {
   display: grid;
   gap: 5px;
+  min-width: 0;
 }
 
 .meal-slot label {
@@ -462,11 +470,13 @@ h3 {
 
 .meal-slot select {
   width: 100%;
+  min-width: 0;
 }
 
 .selected-meal-preview {
   display: grid;
   gap: 7px;
+  min-width: 0;
   min-height: 62px;
   padding: 10px;
   border: 1px dashed var(--line);
@@ -485,17 +495,47 @@ h3 {
 
 .selected-meal-preview strong {
   color: var(--deep);
+  overflow-wrap: anywhere;
 }
 
 .serving-override {
+  display: block;
+  min-width: 0;
+}
+
+.serving-override summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(216, 226, 220, 0.9);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.serving-override label {
   display: grid;
   gap: 4px;
+  margin-top: 6px;
 }
 
 .serving-override span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
+}
+
+.serving-override .mini-field {
+  min-height: 38px;
+  padding: 8px 9px;
 }
 
 .day-macros {
