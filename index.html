@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-16">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-16" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-16">
-  <link rel="stylesheet" href="style.css?v=20260707-16">
+  <link rel="manifest" href="manifest.json?v=20260707-17">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-17" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-17">
+  <link rel="stylesheet" href="style.css?v=20260707-17">
 </head>
 <body>
   <header class="app-header">
@@ -25,11 +25,25 @@
       <select id="activeWeek" class="field compact"></select>
       <button id="updateApp" class="ghost-button" type="button">Update app</button>
       <button id="exportState" class="ghost-button" type="button">Export saved data</button>
+      <button id="copyStateText" class="ghost-button" type="button">Copy share text</button>
       <button id="importState" class="ghost-button" type="button">Import saved data</button>
+      <button id="pasteStateText" class="ghost-button" type="button">Paste saved text</button>
       <input id="importStateFile" type="file" accept="application/json,.json" hidden>
       <button id="resetDemo" class="ghost-button" type="button">Reset saved ticks</button>
     </div>
   </header>
+
+  <section id="shareImportPanel" class="share-panel" hidden>
+    <div>
+      <h2>Paste saved dashboard text</h2>
+      <p>Use this when WhatsApp will not save the data file. Paste the full message here, then import it.</p>
+    </div>
+    <textarea id="shareImportText" class="notes-box" rows="7" placeholder="Paste the nutri-SCULPT saved data message here"></textarea>
+    <div class="inline-controls">
+      <button id="importPastedState" class="primary-button" type="button">Import pasted data</button>
+      <button id="clearShareImport" class="ghost-button" type="button">Clear</button>
+    </div>
+  </section>
 
   <main>
     <section class="stats-strip" aria-label="Challenge summary">
@@ -379,7 +393,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-16"></script>
-  <script src="app.js?v=20260707-16"></script>
+  <script src="data.js?v=20260707-17"></script>
+  <script src="app.js?v=20260707-17"></script>
 </body>
 </html>

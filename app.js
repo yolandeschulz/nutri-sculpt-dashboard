@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-16";
+  const APP_VERSION = "20260707-17";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -47,8 +47,14 @@
   const elements = {
     activeWeek: document.querySelector("#activeWeek"),
     exportState: document.querySelector("#exportState"),
+    copyStateText: document.querySelector("#copyStateText"),
     importState: document.querySelector("#importState"),
+    pasteStateText: document.querySelector("#pasteStateText"),
     importStateFile: document.querySelector("#importStateFile"),
+    shareImportPanel: document.querySelector("#shareImportPanel"),
+    shareImportText: document.querySelector("#shareImportText"),
+    importPastedState: document.querySelector("#importPastedState"),
+    clearShareImport: document.querySelector("#clearShareImport"),
     todayDay: document.querySelector("#todayDay"),
     todayTitle: document.querySelector("#todayTitle"),
     todayMeals: document.querySelector("#todayMeals"),
@@ -444,8 +450,18 @@
       updateAppFiles();
     });
     elements.exportState?.addEventListener("click", exportSavedDashboard);
+    elements.copyStateText?.addEventListener("click", copySavedDashboardText);
     elements.importState?.addEventListener("click", () => elements.importStateFile?.click());
+    elements.pasteStateText?.addEventListener("click", () => {
+      elements.shareImportPanel.hidden = !elements.shareImportPanel.hidden;
+      if (!elements.shareImportPanel.hidden) elements.shareImportText?.focus();
+    });
     elements.importStateFile?.addEventListener("change", importSavedDashboard);
+    elements.importPastedState?.addEventListener("click", importPastedDashboard);
+    elements.clearShareImport?.addEventListener("click", () => {
+      if (elements.shareImportText) elements.shareImportText.value = "";
+      toast("Pasted text cleared.");
+    });
 
     document.querySelector("#printToday").addEventListener("click", () => printView("today"));
     document.querySelector("#printWeek").addEventListener("click", () => printView("week"));
@@ -2528,16 +2544,7 @@
   }
 
   function exportSavedDashboard() {
-    const exportedState = JSON.parse(JSON.stringify(state));
-    if (exportedState.nutritionLookup) {
-      exportedState.nutritionLookup.usdaApiKey = "";
-    }
-    const payload = {
-      app: "nutri-sculpt-dashboard",
-      version: APP_VERSION,
-      exportedAt: new Date().toISOString(),
-      state: exportedState
-    };
+    const payload = buildSharePayload();
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -2551,31 +2558,52 @@
     toast("Saved dashboard exported. Send that file to your mom.");
   }
 
+  async function copySavedDashboardText() {
+    const payload = buildSharePayload();
+    const text = [
+      "nutri-SCULPT saved dashboard data",
+      "Open the app, tap Paste saved text, paste this whole message, then tap Import pasted data.",
+      "",
+      JSON.stringify(payload)
+    ].join("\n");
+    if (elements.shareImportText) {
+      elements.shareImportText.value = text;
+    }
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        toast("Share text copied. Paste it into WhatsApp for your mom.");
+        return;
+      }
+    } catch {
+      // Fall through to the manual copy fallback.
+    }
+    elements.shareImportPanel.hidden = false;
+    elements.shareImportText?.focus();
+    elements.shareImportText?.select();
+    toast("Copy the highlighted text and send it to your mom.");
+  }
+
+  function buildSharePayload() {
+    const exportedState = JSON.parse(JSON.stringify(state));
+    if (exportedState.nutritionLookup) {
+      exportedState.nutritionLookup.usdaApiKey = "";
+    }
+    return {
+      app: "nutri-sculpt-dashboard",
+      version: APP_VERSION,
+      exportedAt: new Date().toISOString(),
+      state: exportedState
+    };
+  }
+
   function importSavedDashboard(event) {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const imported = JSON.parse(String(reader.result || "{}"));
-        const importedState = imported.state || imported;
-        if (!importedState || typeof importedState !== "object" || !importedState.plan) {
-          throw new Error("Not a dashboard save file.");
-        }
-        if (!confirm("Import this saved dashboard? It will replace the saved data on this browser.")) {
-          event.target.value = "";
-          return;
-        }
-        const savedUsdaApiKey = state.nutritionLookup?.usdaApiKey || valueOf(elements.usdaApiKey);
-        state = mergeState(defaultState(), importedState);
-        if (savedUsdaApiKey) {
-          state.nutritionLookup.usdaApiKey = savedUsdaApiKey;
-        }
-        saveState();
-        updateRecipeIndexes();
-        initialiseControls();
-        saveAndRender();
-        toast("Saved dashboard imported.");
+        importDashboardText(String(reader.result || "{}"));
       } catch {
         toast("Could not import that file.");
       } finally {
@@ -2583,6 +2611,49 @@
       }
     };
     reader.readAsText(file);
+  }
+
+  function importPastedDashboard() {
+    try {
+      if (importDashboardText(valueOf(elements.shareImportText))) {
+        if (elements.shareImportText) elements.shareImportText.value = "";
+        if (elements.shareImportPanel) elements.shareImportPanel.hidden = true;
+      }
+    } catch {
+      toast("Could not import that pasted text.");
+    }
+  }
+
+  function importDashboardText(text) {
+    const imported = parseSharedDashboardText(text);
+    const importedState = imported.state || imported;
+    if (!importedState || typeof importedState !== "object" || !importedState.plan) {
+      throw new Error("Not a dashboard save file.");
+    }
+    if (!confirm("Import this saved dashboard? It will replace the saved data on this browser.")) {
+      return false;
+    }
+    const savedUsdaApiKey = state.nutritionLookup?.usdaApiKey || valueOf(elements.usdaApiKey);
+    state = mergeState(defaultState(), importedState);
+    if (savedUsdaApiKey) {
+      state.nutritionLookup.usdaApiKey = savedUsdaApiKey;
+    }
+    saveState();
+    updateRecipeIndexes();
+    initialiseControls();
+    saveAndRender();
+    toast("Saved dashboard imported.");
+    return true;
+  }
+
+  function parseSharedDashboardText(text) {
+    const trimmed = String(text || "").trim();
+    const firstBrace = trimmed.indexOf("{");
+    const lastBrace = trimmed.lastIndexOf("}");
+    const jsonText = firstBrace >= 0 && lastBrace > firstBrace
+      ? trimmed.slice(firstBrace, lastBrace + 1)
+      : trimmed;
+    return JSON.parse(jsonText);
   }
 
   async function updateAppFiles() {
