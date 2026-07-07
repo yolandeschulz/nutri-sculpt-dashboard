@@ -8,17 +8,17 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-4">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-4" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-4">
-  <link rel="stylesheet" href="style.css?v=20260707-4">
+  <link rel="manifest" href="manifest.json?v=20260707-5">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-5" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-5">
+  <link rel="stylesheet" href="style.css?v=20260707-5">
 </head>
 <body>
   <header class="app-header">
     <div>
-      <p class="eyebrow">PDF-only tracker</p>
+      <p class="eyebrow">PDF tracker plus custom meals</p>
       <h1>nutri-SCULPT 8 Week Dashboard</h1>
-      <p class="subhead">Plan meals, build the shopping list, tick off daily rules, track workouts, and follow progress in one place.</p>
+      <p class="subhead">Plan PDF meals, add confirmed custom meals, build the shopping list, tick off daily rules, and track progress in one place.</p>
     </div>
     <div class="header-actions">
       <label class="select-label" for="activeWeek">Week</label>
@@ -31,7 +31,7 @@
   <main>
     <section class="stats-strip" aria-label="Challenge summary">
       <article class="stat-card accent-teal">
-        <span class="stat-label">Meals in PDF bank</span>
+        <span class="stat-label">PDF + custom meals</span>
         <strong id="statMeals">0</strong>
       </article>
       <article class="stat-card accent-coral">
@@ -46,12 +46,17 @@
         <span class="stat-label">Workouts this week</span>
         <strong id="statWorkouts">0/3</strong>
       </article>
+      <article class="stat-card accent-teal">
+        <span class="stat-label">Today calories</span>
+        <strong id="statTodayCalories">0/1500</strong>
+      </article>
     </section>
 
     <nav class="tabs" aria-label="Dashboard sections">
       <button class="tab active" data-view="today" type="button">Today</button>
       <button class="tab" data-view="week" type="button">This Week</button>
       <button class="tab" data-view="meals" type="button">Meals</button>
+      <button class="tab" data-view="custom" type="button">Custom</button>
       <button class="tab" data-view="shopping" type="button">Shopping</button>
       <button class="tab" data-view="workouts" type="button">Workouts</button>
       <button class="tab" data-view="progress" type="button">Progress</button>
@@ -73,6 +78,7 @@
         <section class="today-plan" aria-label="Today's planned meals">
           <h3 id="todayTitle">Today</h3>
           <div id="todayMeals" class="meal-summary-grid"></div>
+          <div id="todayTotals" class="today-totals"></div>
           <label class="notes-label" for="todayNotes">How did today go?</label>
           <textarea id="todayNotes" class="notes-box" rows="5" placeholder="Short note for the day"></textarea>
         </section>
@@ -99,7 +105,7 @@
     <section id="view-meals" class="view">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Choose from the PDF only</p>
+          <p class="eyebrow">PDF meals and saved custom meals</p>
           <h2>Meal Customiser</h2>
         </div>
         <div class="meal-filters">
@@ -119,6 +125,90 @@
       <div id="mealCards" class="meal-card-grid"></div>
     </section>
 
+    <section id="view-custom" class="view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">PDF bank plus confirmed custom items</p>
+          <h2>Custom Meals</h2>
+        </div>
+      </div>
+
+      <datalist id="ingredientOptions"></datalist>
+
+      <div class="custom-layout">
+        <section class="custom-panel">
+          <h3>Custom Ingredient</h3>
+          <div class="form-grid">
+            <label>Ingredient name<input id="customIngredientName" class="field" list="ingredientOptions" placeholder="e.g. Protein yoghurt"></label>
+            <label>Brand<input id="customIngredientBrand" class="field" placeholder="Optional"></label>
+            <label>Serving size<input id="customIngredientAmount" class="field" placeholder="e.g. 150 g"></label>
+            <label>Category<select id="customIngredientCategory" class="field"></select></label>
+            <label>Calories<input id="customIngredientCalories" class="field" type="number" min="0" step="0.1"></label>
+            <label>Protein g<input id="customIngredientProtein" class="field" type="number" min="0" step="0.1"></label>
+            <label>Carbs g<input id="customIngredientCarbs" class="field" type="number" min="0" step="0.1"></label>
+            <label>Fat g<input id="customIngredientFat" class="field" type="number" min="0" step="0.1"></label>
+            <label>Fibre g<input id="customIngredientFibre" class="field" type="number" min="0" step="0.1"></label>
+            <label>Source<select id="customIngredientSource" class="field"></select></label>
+            <label class="wide-field">Source link or note<input id="customIngredientSourceUrl" class="field" placeholder="Optional"></label>
+            <label class="toggle-row wide-field"><input id="customIngredientVerified" type="checkbox"><span>Confirmed from label or verified source</span></label>
+          </div>
+          <button id="saveCustomIngredient" class="primary-button" type="button">Save ingredient</button>
+        </section>
+
+        <section class="custom-panel">
+          <h3>Nutrition Label Photo</h3>
+          <input id="labelPhoto" class="field" type="file" accept="image/*" capture="environment">
+          <img id="labelPreview" class="label-preview" alt="Nutrition label preview" hidden>
+          <div class="inline-controls">
+            <button id="readLabelPhoto" class="ghost-button" type="button">Read label</button>
+            <button id="useLabelForIngredient" class="primary-button" type="button">Use values</button>
+          </div>
+          <textarea id="labelOcrText" class="notes-box" rows="7" placeholder="Extracted nutrition text appears here. You can also type the label values here."></textarea>
+        </section>
+
+        <section class="custom-panel span-two">
+          <h3>Build Custom Meal</h3>
+          <div class="form-grid">
+            <label>Meal name<input id="customMealName" class="field" placeholder="e.g. Chicken salad custom"></label>
+            <label>Meal type<select id="customMealType" class="field"></select></label>
+            <label class="wide-field">Notes<input id="customMealNotes" class="field" placeholder="Optional"></label>
+          </div>
+
+          <div class="ingredient-builder">
+            <div class="form-grid">
+              <label>Ingredient<input id="mealIngredientName" class="field" list="ingredientOptions" placeholder="Choose or type"></label>
+              <label>Amount<input id="mealIngredientAmount" class="field" placeholder="e.g. 100 g"></label>
+              <label>Category<select id="mealIngredientCategory" class="field"></select></label>
+              <label>Calories<input id="mealIngredientCalories" class="field" type="number" min="0" step="0.1"></label>
+              <label>Protein g<input id="mealIngredientProtein" class="field" type="number" min="0" step="0.1"></label>
+              <label>Carbs g<input id="mealIngredientCarbs" class="field" type="number" min="0" step="0.1"></label>
+              <label>Fat g<input id="mealIngredientFat" class="field" type="number" min="0" step="0.1"></label>
+              <label>Fibre g<input id="mealIngredientFibre" class="field" type="number" min="0" step="0.1"></label>
+              <label>Source<select id="mealIngredientSource" class="field"></select></label>
+            </div>
+            <button id="addMealIngredient" class="ghost-button" type="button">Add ingredient</button>
+          </div>
+
+          <div id="customMealTotals" class="today-totals"></div>
+          <div id="customMealBuilderList" class="custom-list"></div>
+          <div class="inline-controls">
+            <button id="clearCustomMeal" class="ghost-button" type="button">Clear meal</button>
+            <button id="saveCustomMeal" class="primary-button" type="button">Save custom meal</button>
+          </div>
+        </section>
+
+        <section class="custom-panel">
+          <h3>Saved Custom Meals</h3>
+          <div id="customMealsList" class="custom-list"></div>
+        </section>
+
+        <section class="custom-panel">
+          <h3>Ingredient Bank</h3>
+          <div id="customIngredientBank" class="custom-list"></div>
+        </section>
+      </div>
+    </section>
+
     <section id="view-shopping" class="view">
       <div class="section-heading">
         <div>
@@ -133,7 +223,7 @@
       <div class="shopping-tools">
         <label class="toggle-row">
           <input id="showAllShopping" type="checkbox">
-          <span>Show full PDF shopping bank, not only selected meals</span>
+          <span>Show full meal bank, not only selected meals</span>
         </label>
         <div class="status-legend">
           <span class="pill need">Need to buy</span>
@@ -199,7 +289,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-4"></script>
-  <script src="app.js?v=20260707-4"></script>
+  <script src="data.js?v=20260707-5"></script>
+  <script src="app.js?v=20260707-5"></script>
 </body>
 </html>

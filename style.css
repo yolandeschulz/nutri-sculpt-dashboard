@@ -114,7 +114,7 @@ main {
 
 .stats-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   margin: 8px 0 18px;
 }
@@ -256,6 +256,12 @@ h3 {
 .icon-button {
   background: var(--deep);
   color: var(--white);
+}
+
+.small-button {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 .today-layout,
@@ -430,12 +436,185 @@ h3 {
   color: var(--deep);
 }
 
+.source-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--deep);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.today-totals {
+  margin-top: 14px;
+}
+
+.target-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+
+.target-card strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--deep);
+  font-size: 24px;
+}
+
+.target-meter {
+  height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e9edf0;
+}
+
+.target-meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+}
+
+.within-target {
+  border-color: rgba(104, 163, 87, 0.45);
+  background: var(--green-soft);
+}
+
+.near-target {
+  border-color: rgba(244, 201, 93, 0.75);
+  background: var(--gold-soft);
+}
+
+.near-target .target-meter span {
+  background: var(--gold);
+}
+
+.over-target {
+  border-color: rgba(233, 111, 87, 0.55);
+  background: var(--rose);
+}
+
+.over-target .target-meter span {
+  background: var(--coral);
+}
+
 .info-band {
   margin-bottom: 14px;
   padding: 14px 16px;
   border-radius: var(--radius);
   background: var(--gold-soft);
   border: 1px solid #efd072;
+}
+
+.custom-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+  gap: 16px;
+}
+
+.custom-panel {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.span-two {
+  grid-column: 1 / -1;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.form-grid label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wide-field {
+  grid-column: span 2;
+}
+
+.ingredient-builder {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--pale);
+}
+
+.custom-list {
+  display: grid;
+  gap: 10px;
+}
+
+.custom-list-item,
+.draft-ingredient,
+.empty-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--white);
+}
+
+.custom-list-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.custom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.macro-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(72px, 1fr));
+  gap: 8px;
+}
+
+.macro-edit-grid label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.mini-field {
+  min-height: 34px;
+  padding: 5px 7px;
+}
+
+.label-preview {
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
 }
 
 .meal-card-grid {
@@ -704,6 +883,14 @@ h3 {
   .week-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .custom-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -716,7 +903,8 @@ h3 {
   .section-heading,
   .today-layout,
   .progress-layout,
-  .rules-layout {
+  .rules-layout,
+  .custom-layout {
     grid-template-columns: 1fr;
     display: grid;
   }
@@ -815,6 +1003,7 @@ h3 {
   .today-plan,
   .habit-panel,
   .photo-panel,
+  .custom-panel,
   .rules-layout section,
   .progress-layout section,
   .day-card,
@@ -845,6 +1034,21 @@ h3 {
   .app-version {
     justify-content: center;
     width: 100%;
+  }
+
+  .form-grid,
+  .macro-edit-grid,
+  .custom-list-item {
+    grid-template-columns: 1fr;
+  }
+
+  .wide-field,
+  .span-two {
+    grid-column: auto;
+  }
+
+  .custom-actions {
+    justify-content: stretch;
   }
 
   .check-item,
