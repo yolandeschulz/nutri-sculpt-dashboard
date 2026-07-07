@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#174a43">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>nutri-SCULPT 8 Week Dashboard</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/icons/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">PDF-only tracker</p>
+      <h1>nutri-SCULPT 8 Week Dashboard</h1>
+      <p class="subhead">Plan meals, build the shopping list, tick off daily rules, track workouts, and follow progress in one place.</p>
+    </div>
+    <div class="header-actions">
+      <label class="select-label" for="activeWeek">Week</label>
+      <select id="activeWeek" class="field compact"></select>
+      <button id="resetDemo" class="ghost-button" type="button">Reset saved ticks</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="stats-strip" aria-label="Challenge summary">
+      <article class="stat-card accent-teal">
+        <span class="stat-label">Meals in PDF bank</span>
+        <strong id="statMeals">0</strong>
+      </article>
+      <article class="stat-card accent-coral">
+        <span class="stat-label">Weekly shopping items</span>
+        <strong id="statShopping">0</strong>
+      </article>
+      <article class="stat-card accent-gold">
+        <span class="stat-label">Daily rules ticked</span>
+        <strong id="statRules">0%</strong>
+      </article>
+      <article class="stat-card accent-green">
+        <span class="stat-label">Workouts this week</span>
+        <strong id="statWorkouts">0/3</strong>
+      </article>
+    </section>
+
+    <nav class="tabs" aria-label="Dashboard sections">
+      <button class="tab active" data-view="today" type="button">Today</button>
+      <button class="tab" data-view="week" type="button">This Week</button>
+      <button class="tab" data-view="meals" type="button">Meals</button>
+      <button class="tab" data-view="shopping" type="button">Shopping</button>
+      <button class="tab" data-view="workouts" type="button">Workouts</button>
+      <button class="tab" data-view="progress" type="button">Progress</button>
+      <button class="tab" data-view="rules" type="button">PDF Rules</button>
+    </nav>
+
+    <section id="view-today" class="view active">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Daily control panel</p>
+          <h2>Today</h2>
+        </div>
+        <div class="inline-controls">
+          <select id="todayDay" class="field"></select>
+          <button class="primary-button" id="printToday" type="button">Print today</button>
+        </div>
+      </div>
+      <div class="today-layout">
+        <section class="today-plan" aria-label="Today's planned meals">
+          <h3 id="todayTitle">Today</h3>
+          <div id="todayMeals" class="meal-summary-grid"></div>
+          <label class="notes-label" for="todayNotes">How did today go?</label>
+          <textarea id="todayNotes" class="notes-box" rows="5" placeholder="Short note for the day"></textarea>
+        </section>
+        <section class="habit-panel" aria-label="Daily rules">
+          <h3>Daily tick list</h3>
+          <div id="dailyChecks" class="check-list"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="view-week" class="view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Plan at least 3 days ahead</p>
+          <h2>This Week</h2>
+        </div>
+        <div class="inline-controls">
+          <button class="primary-button" id="printWeek" type="button">Print weekly plan</button>
+        </div>
+      </div>
+      <div id="weekGrid" class="week-grid"></div>
+    </section>
+
+    <section id="view-meals" class="view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Choose from the PDF only</p>
+          <h2>Meal Customiser</h2>
+        </div>
+        <div class="meal-filters">
+          <input id="mealSearch" class="field search" type="search" placeholder="Search meals or ingredients">
+          <select id="mealTypeFilter" class="field"></select>
+          <select id="sortMeals" class="field">
+            <option value="pdf">PDF order</option>
+            <option value="ready">Easiest from what I have</option>
+            <option value="protein">Highest protein</option>
+            <option value="calories">Lowest calories</option>
+          </select>
+        </div>
+      </div>
+      <div class="info-band">
+        <strong>Customise safely:</strong> the PDF allows mix-and-match meals, meat swaps, and low-carb carb replacements. It also says nutrition changes when swaps are made.
+      </div>
+      <div id="mealCards" class="meal-card-grid"></div>
+    </section>
+
+    <section id="view-shopping" class="view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Built from selected meals</p>
+          <h2>Shopping List</h2>
+        </div>
+        <div class="inline-controls">
+          <button class="ghost-button" id="copyShopping" type="button">Copy list</button>
+          <button class="primary-button" id="printShopping" type="button">Print shopping list</button>
+        </div>
+      </div>
+      <div class="shopping-tools">
+        <label class="toggle-row">
+          <input id="showAllShopping" type="checkbox">
+          <span>Show full PDF shopping bank, not only selected meals</span>
+        </label>
+        <div class="status-legend">
+          <span class="pill need">Need to buy</span>
+          <span class="pill have">Already have</span>
+          <span class="pill optional">Optional</span>
+          <span class="pill skip">Skip</span>
+        </div>
+      </div>
+      <div id="shoppingList" class="shopping-list"></div>
+    </section>
+
+    <section id="view-workouts" class="view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Minimum 3x per week</p>
+          <h2>Workout Tracker</h2>
+        </div>
+        <select id="workoutPhase" class="field"></select>
+      </div>
+      <div id="workoutGrid" class="workout-grid"></div>
+    </section>
+
+    <section id="view-progress" class="view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Track more than weight</p>
+          <h2>Progress</h2>
+        </div>
+      </div>
+      <div class="progress-layout">
+        <section>
+          <h3>Measurements</h3>
+          <div id="measurementTable" class="responsive-table"></div>
+        </section>
+        <section class="photo-panel">
+          <h3>Photo reminders</h3>
+          <div id="photoGuidelines" class="check-list static"></div>
+          <h3>Weekly reflection</h3>
+          <textarea id="weeklyReflection" class="notes-box" rows="7" placeholder="What worked? What was hard? What should change next week?"></textarea>
+        </section>
+      </div>
+    </section>
+
+    <section id="view-rules" class="view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Reference from the PDF</p>
+          <h2>PDF Rules and Instructions</h2>
+        </div>
+      </div>
+      <div class="rules-layout">
+        <section>
+          <h3>Daily guidelines</h3>
+          <div id="rulesList" class="rule-list"></div>
+        </section>
+        <section>
+          <h3>Meal plan instructions</h3>
+          <div id="instructionsList" class="rule-list warm"></div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

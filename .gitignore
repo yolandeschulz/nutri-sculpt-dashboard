@@ -1,0 +1,5 @@
+qa/
+*.log
+preview-url.txt
+.DS_Store
+Thumbs.db
