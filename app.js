@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-19";
+  const APP_VERSION = "20260707-20";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
@@ -620,6 +620,14 @@
         handleServingChange(target);
       }
 
+      if (target.matches("[data-product-planner-slot]")) {
+        updateCustomProductPlannerSlot(target.dataset.productPlannerSlot, target.value);
+      }
+
+      if (target.matches("[data-product-shopping-category]")) {
+        updateCustomProductShoppingCategory(target.dataset.productShoppingCategory, target.value);
+      }
+
       if (target.matches("[data-ingredient-status]")) {
         state.ingredients[target.dataset.ingredientStatus] = target.value;
         saveAndRender(["shopping", "meals", "stats"]);
@@ -1102,6 +1110,20 @@
             <strong>${escapeHtml(recipe.name)}</strong>
             <div class="item-meta">${escapeHtml(product.brand || "No brand")} | ${escapeHtml(recipe.type)} | ${nutritionLine(recipe)}</div>
             <div class="item-meta">${escapeHtml(product.source || "Manual entry - needs review")}${product.verified ? " | confirmed" : " | needs review"}</div>
+            <div class="saved-product-controls">
+              <label>
+                <span>Planner slot</span>
+                <select class="field mini-select" data-product-planner-slot="${escapeHtml(product.id)}">
+                  ${plannerSlotOptions(recipe.type)}
+                </select>
+              </label>
+              <label>
+                <span>Shopping category</span>
+                <select class="field mini-select" data-product-shopping-category="${escapeHtml(product.id)}">
+                  ${shoppingCategoryOptions(productCategory(product))}
+                </select>
+              </label>
+            </div>
           </div>
           <div class="custom-actions">
             <button class="ghost-button small-button" type="button" data-use-custom-product="${escapeHtml(product.id)}">Use in meal</button>
@@ -1111,6 +1133,18 @@
         </article>
       `;
     }).join("");
+  }
+
+  function plannerSlotOptions(selected) {
+    const options = SLOTS
+      .flatMap((slot) => slot.types)
+      .filter((type, index, list) => list.indexOf(type) === index)
+      .filter((type) => type !== "Other");
+    return options.map((type) => `<option value="${escapeHtml(type)}" ${type === selected ? "selected" : ""}>${escapeHtml(type)}</option>`).join("");
+  }
+
+  function shoppingCategoryOptions(selected) {
+    return CATEGORY_ORDER.map((category) => `<option value="${escapeHtml(category)}" ${category === selected ? "selected" : ""}>${escapeHtml(category)}</option>`).join("");
   }
 
   function lookupResultsHtml() {
@@ -1325,6 +1359,25 @@
     fillProductForm(product);
     showView("custom");
     toast("Product loaded. Edit the form, then press Save product.");
+  }
+
+  function updateCustomProductPlannerSlot(id, type) {
+    const product = (state.customProducts || []).find((item) => item.id === id);
+    if (!product) return;
+    product.type = type || inferProductType(product.name || product.item);
+    updateRecipeIndexes();
+    initialiseControls();
+    saveAndRender(["custom", "meals", "week", "today", "shopping", "stats"]);
+    toast(`${product.name} moved to ${product.type}.`);
+  }
+
+  function updateCustomProductShoppingCategory(id, category) {
+    const product = (state.customProducts || []).find((item) => item.id === id);
+    if (!product) return;
+    product.category = category || inferProductCategory(product.name || product.item);
+    updateRecipeIndexes();
+    saveAndRender(["custom", "meals", "shopping"]);
+    toast(`${product.name} shopping category updated.`);
   }
 
   function readProductForm() {
