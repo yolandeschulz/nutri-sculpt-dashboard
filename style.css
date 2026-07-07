@@ -366,6 +366,37 @@ h3 {
   background: var(--white);
 }
 
+.macro-target-panel {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(0, 2fr) auto;
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid rgba(216, 226, 220, 0.9);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow);
+}
+
+.macro-target-panel h3 {
+  margin: 4px 0 0;
+  color: var(--deep);
+}
+
+.target-input-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(90px, 1fr));
+  gap: 10px;
+}
+
+.target-input-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
 .check-list {
   display: grid;
   gap: 8px;
@@ -1122,6 +1153,15 @@ h3 {
   .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .macro-target-panel {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .target-input-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 760px) {
@@ -1269,6 +1309,7 @@ h3 {
 
   .form-grid,
   .macro-edit-grid,
+  .target-input-grid,
   .custom-list-item,
   .lookup-tools,
   .lookup-result,

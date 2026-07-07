@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-17">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-17" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-17">
-  <link rel="stylesheet" href="style.css?v=20260707-17">
+  <link rel="manifest" href="manifest.json?v=20260707-18">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-18" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-18">
+  <link rel="stylesheet" href="style.css?v=20260707-18">
 </head>
 <body>
   <header class="app-header">
@@ -48,7 +48,7 @@
   <main>
     <section class="stats-strip" aria-label="Challenge summary">
       <article class="stat-card accent-teal">
-        <span class="stat-label">PDF + custom meals</span>
+        <span class="stat-label">PDF + custom foods</span>
         <strong id="statMeals">0</strong>
       </article>
       <article class="stat-card accent-coral">
@@ -91,6 +91,20 @@
           <button class="primary-button" id="printToday" type="button">Print today</button>
         </div>
       </div>
+      <section class="macro-target-panel" aria-label="Daily calorie and macro targets">
+        <div>
+          <p class="eyebrow">Editable daily goals</p>
+          <h3>Targets for the day</h3>
+        </div>
+        <div class="target-input-grid">
+          <label>Calories<input id="targetCalories" class="field" type="number" min="0" step="10"></label>
+          <label>Protein g<input id="targetProtein" class="field" type="number" min="0" step="1"></label>
+          <label>Carbs g<input id="targetCarbs" class="field" type="number" min="0" step="1"></label>
+          <label>Fat g<input id="targetFat" class="field" type="number" min="0" step="1"></label>
+          <label>Fibre g<input id="targetFibre" class="field" type="number" min="0" step="1"></label>
+        </div>
+        <button id="resetMacroTargets" class="ghost-button" type="button">Reset targets</button>
+      </section>
       <div class="today-layout">
         <section class="today-plan" aria-label="Today's planned meals">
           <h3 id="todayTitle">Today</h3>
@@ -393,7 +407,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-17"></script>
-  <script src="app.js?v=20260707-17"></script>
+  <script src="data.js?v=20260707-18"></script>
+  <script src="app.js?v=20260707-18"></script>
 </body>
 </html>

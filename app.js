@@ -1,8 +1,14 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-17";
+  const APP_VERSION = "20260707-18";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
-  const CALORIE_TARGET = 1500;
+  const DEFAULT_MACRO_TARGETS = {
+    calories: 1500,
+    protein: 100,
+    carbs: 120,
+    fat: 50,
+    fibre: 25
+  };
   const DAYS = DATA.days;
   const STATUSES = ["Need to buy", "Already have", "Optional", "Skip"];
   const CATEGORY_ORDER = ["Protein", "Dairy", "Fruit and veg", "Carbs", "Sauces", "Pantry"];
@@ -19,7 +25,8 @@
     { key: "lunch", label: "Lunch", types: ["Lunch or Dinner"] },
     { key: "dinner", label: "Dinner", types: ["Lunch or Dinner"] },
     { key: "carbSnack", label: "Carb Snack", types: ["Carb Snack"] },
-    { key: "proteinSnack", label: "High Protein Snack", types: ["High Protein Snack"] }
+    { key: "proteinSnack", label: "High Protein Snack", types: ["High Protein Snack"] },
+    { key: "other", label: "Other", types: ["Other"], allowAll: true }
   ];
   const DAILY_CHECKS = [
     { key: "water", label: "Water 2-3 L" },
@@ -80,6 +87,12 @@
     statWorkouts: document.querySelector("#statWorkouts"),
     statTodayCalories: document.querySelector("#statTodayCalories"),
     todayTotals: document.querySelector("#todayTotals"),
+    targetCalories: document.querySelector("#targetCalories"),
+    targetProtein: document.querySelector("#targetProtein"),
+    targetCarbs: document.querySelector("#targetCarbs"),
+    targetFat: document.querySelector("#targetFat"),
+    targetFibre: document.querySelector("#targetFibre"),
+    resetMacroTargets: document.querySelector("#resetMacroTargets"),
     customIngredientName: document.querySelector("#customIngredientName"),
     customIngredientBrand: document.querySelector("#customIngredientBrand"),
     customIngredientAmount: document.querySelector("#customIngredientAmount"),
@@ -175,11 +188,41 @@
   }
 
   function updateRecipeIndexes() {
+    const customIngredients = (state.customIngredients || []).map((ingredient, index) => normaliseCustomIngredient(ingredient, index));
     const customProducts = (state.customProducts || []).map((product, index) => normaliseCustomProduct(product, index));
     const customRecipes = (state.customMeals || []).map((meal, index) => normaliseCustomMeal(meal, index));
-    recipes = [...pdfRecipes, ...customProducts, ...customRecipes];
+    recipes = [...pdfRecipes, ...customIngredients, ...customProducts, ...customRecipes];
     recipeByName = new Map(recipes.map((recipe) => [recipe.name, recipe]));
     types = [...new Set(recipes.map((recipe) => recipe.type))];
+  }
+
+  function normaliseCustomIngredient(ingredient, index) {
+    const name = ingredient.item || ingredient.name || `Custom ingredient ${index + 1}`;
+    const amount = ingredient.amount || "1 serving";
+    return {
+      id: ingredient.id || slug(`ingredient-${index}-${name}`),
+      name,
+      type: "Other",
+      servings: amount,
+      calories: Number(ingredient.calories) || 0,
+      protein_g: Number(ingredient.protein_g) || 0,
+      carbs_g: Number(ingredient.carbs_g) || 0,
+      fat_g: Number(ingredient.fat_g) || 0,
+      fibre_g: Number(ingredient.fibre_g) || 0,
+      ingredients: [{
+        item: name,
+        amount,
+        category: ingredient.category || "Pantry",
+        calories: Number(ingredient.calories) || 0,
+        protein_g: Number(ingredient.protein_g) || 0,
+        carbs_g: Number(ingredient.carbs_g) || 0,
+        fat_g: Number(ingredient.fat_g) || 0,
+        fibre_g: Number(ingredient.fibre_g) || 0,
+        source: ingredient.source || "Manual entry - needs review"
+      }],
+      notes: `Custom ingredient. Values are per ${amount}.`,
+      source: "Ingredient"
+    };
   }
 
   function normaliseCustomProduct(product, index) {
@@ -252,6 +295,7 @@
       sortMeals: "pdf",
       showAllShopping: false,
       workoutPhase: "Week 1-2",
+      macroTargets: { ...DEFAULT_MACRO_TARGETS },
       plan,
       ingredients: {},
       daily: {},
@@ -307,6 +351,7 @@
       measurements: { ...base.measurements, ...(saved.measurements || {}) },
       reflections: { ...base.reflections, ...(saved.reflections || {}) },
       photoChecks: { ...base.photoChecks, ...(saved.photoChecks || {}) },
+      macroTargets: normaliseMacroTargets(saved.macroTargets || base.macroTargets),
       customIngredients: Array.isArray(saved.customIngredients) ? saved.customIngredients : [],
       customProducts: Array.isArray(saved.customProducts) ? saved.customProducts : [],
       customMeals: Array.isArray(saved.customMeals) ? saved.customMeals : [],
@@ -375,7 +420,49 @@
     elements.sortMeals.value = state.sortMeals;
     elements.showAllShopping.checked = state.showAllShopping;
     elements.workoutPhase.value = state.workoutPhase;
+    syncMacroTargetInputs();
     if (elements.usdaApiKey) elements.usdaApiKey.value = state.nutritionLookup?.usdaApiKey || "";
+  }
+
+  function syncMacroTargetInputs() {
+    const targets = currentMacroTargets();
+    if (elements.targetCalories) elements.targetCalories.value = targets.calories;
+    if (elements.targetProtein) elements.targetProtein.value = targets.protein;
+    if (elements.targetCarbs) elements.targetCarbs.value = targets.carbs;
+    if (elements.targetFat) elements.targetFat.value = targets.fat;
+    if (elements.targetFibre) elements.targetFibre.value = targets.fibre;
+  }
+
+  function updateMacroTargetsFromInputs() {
+    state.macroTargets = normaliseMacroTargets({
+      calories: numberOf(elements.targetCalories),
+      protein: numberOf(elements.targetProtein),
+      carbs: numberOf(elements.targetCarbs),
+      fat: numberOf(elements.targetFat),
+      fibre: numberOf(elements.targetFibre)
+    });
+    saveAndRender(["today", "week", "stats"]);
+  }
+
+  function normaliseMacroTargets(targets) {
+    const safeTargets = { ...DEFAULT_MACRO_TARGETS, ...(targets || {}) };
+    return {
+      calories: positiveTarget(safeTargets.calories, DEFAULT_MACRO_TARGETS.calories),
+      protein: positiveTarget(safeTargets.protein, DEFAULT_MACRO_TARGETS.protein),
+      carbs: positiveTarget(safeTargets.carbs, DEFAULT_MACRO_TARGETS.carbs),
+      fat: positiveTarget(safeTargets.fat, DEFAULT_MACRO_TARGETS.fat),
+      fibre: positiveTarget(safeTargets.fibre, DEFAULT_MACRO_TARGETS.fibre)
+    };
+  }
+
+  function positiveTarget(value, fallback) {
+    const number = Number(value);
+    return Number.isFinite(number) && number > 0 ? round(number) : fallback;
+  }
+
+  function currentMacroTargets() {
+    state.macroTargets = normaliseMacroTargets(state.macroTargets);
+    return state.macroTargets;
   }
 
   function attachEvents() {
@@ -433,6 +520,22 @@
     elements.weeklyReflection.addEventListener("input", () => {
       state.reflections[state.activeWeek] = elements.weeklyReflection.value;
       saveState();
+    });
+
+    [
+      elements.targetCalories,
+      elements.targetProtein,
+      elements.targetCarbs,
+      elements.targetFat,
+      elements.targetFibre
+    ].forEach((input) => {
+      input?.addEventListener("input", updateMacroTargetsFromInputs);
+    });
+    elements.resetMacroTargets?.addEventListener("click", () => {
+      state.macroTargets = { ...DEFAULT_MACRO_TARGETS };
+      syncMacroTargetInputs();
+      saveAndRender(["today", "week", "stats"]);
+      toast("Daily targets reset.");
     });
 
     document.querySelector("#resetDemo").addEventListener("click", () => {
@@ -660,8 +763,8 @@
   function mealSelectHtml(day, slot, selected) {
     const selectedRecipe = recipeByName.get(selected);
     const options = recipes
-      .filter((recipe) => slot.types.includes(recipe.type))
-      .map((recipe) => `<option value="${escapeHtml(recipe.name)}" ${recipe.name === selected ? "selected" : ""}>${escapeHtml(recipe.name)}${recipe.source === "Custom" ? " (Custom)" : recipe.source === "Product" ? " (Product)" : ""}</option>`)
+      .filter((recipe) => slot.allowAll || slot.types.includes(recipe.type))
+      .map((recipe) => `<option value="${escapeHtml(recipe.name)}" ${recipe.name === selected ? "selected" : ""}>${escapeHtml(recipe.name)}${recipe.source === "Custom" ? " (Custom)" : recipe.source === "Product" ? " (Product)" : recipe.source === "Ingredient" ? " (Ingredient)" : ""}</option>`)
       .join("");
     return `
       <div class="meal-slot">
@@ -1048,11 +1151,17 @@
     if (existing >= 0) {
       state.customIngredients[existing] = { ...state.customIngredients[existing], ...ingredient, id: state.customIngredients[existing].id };
     } else {
-      state.customIngredients.push({ ...ingredient, id: uniqueId("ingredient") });
+      const safeIngredient = { ...ingredient };
+      if (recipeByName.has(safeIngredient.item)) {
+        safeIngredient.item = uniqueIngredientName(safeIngredient.item);
+      }
+      state.customIngredients.push({ ...safeIngredient, id: uniqueId("ingredient") });
     }
     clearCustomIngredientForm();
-    saveAndRender(["custom"]);
-    toast("Ingredient saved.");
+    updateRecipeIndexes();
+    initialiseControls();
+    saveAndRender();
+    toast(`${ingredient.item} saved. It is now available in Other.`);
   }
 
   function saveCustomProductFromForm() {
@@ -1660,8 +1769,12 @@
   }
 
   function deleteCustomIngredient(id) {
-    state.customIngredients = (state.customIngredients || []).filter((ingredient) => ingredient.id !== id);
-    saveAndRender(["custom"]);
+    const ingredient = (state.customIngredients || []).find((item) => item.id === id);
+    state.customIngredients = (state.customIngredients || []).filter((item) => item.id !== id);
+    if (ingredient) removeMealFromPlans(ingredient.item);
+    updateRecipeIndexes();
+    initialiseControls();
+    saveAndRender();
     toast("Custom ingredient deleted.");
   }
 
@@ -2100,14 +2213,15 @@
     const dailyPercent = weeklyDailyPercent();
     const workoutCount = completedWorkoutDaysForWeek();
     const todayTotals = sumMacros(selectedMealsForDay(state.todayDay));
+    const targets = currentMacroTargets();
 
-    const customCount = (state.customProducts?.length || 0) + (state.customMeals?.length || 0);
+    const customCount = (state.customIngredients?.length || 0) + (state.customProducts?.length || 0) + (state.customMeals?.length || 0);
     elements.statMeals.textContent = `${pdfRecipes.length}${customCount ? ` + ${customCount}` : ""}`;
     elements.statShopping.textContent = needCount;
     elements.statRules.textContent = `${dailyPercent}%`;
     elements.statWorkouts.textContent = `${workoutCount}/3`;
     if (elements.statTodayCalories) {
-      elements.statTodayCalories.textContent = `${Math.round(todayTotals.calories)}/${CALORIE_TARGET}`;
+      elements.statTodayCalories.textContent = `${Math.round(todayTotals.calories)}/${Math.round(targets.calories)}`;
     }
   }
 
@@ -2160,19 +2274,20 @@
 
   function dailyTotalsHtml(day) {
     const totals = sumMacros(selectedMealsForDay(day));
+    const targets = currentMacroTargets();
     return `
       <div class="target-card ${calorieStatusClass(totals.calories)}">
         <div>
-          <span class="stat-label">Daily target</span>
-          <strong>${Math.round(totals.calories)} / ${CALORIE_TARGET} cal</strong>
+          <span class="stat-label">Daily calories</span>
+          <strong>${Math.round(totals.calories)} / ${Math.round(targets.calories)} cal</strong>
         </div>
-        <div class="target-meter" aria-hidden="true"><span style="width:${Math.min(100, Math.round((totals.calories / CALORIE_TARGET) * 100))}%"></span></div>
+        <div class="target-meter" aria-hidden="true"><span style="width:${targetPercent(totals.calories, targets.calories)}%"></span></div>
         <div class="macro-row">
           <span class="macro">${calorieRemainingText(totals.calories)}</span>
-          <span class="macro">Protein: ${round(totals.protein)}g</span>
-          <span class="macro">Carbs: ${round(totals.carbs)}g</span>
-          <span class="macro">Fat: ${round(totals.fat)}g</span>
-          <span class="macro">Fibre: ${round(totals.fibre || 0)}g</span>
+          <span class="macro">${macroTargetText("Protein", totals.protein, targets.protein, "minimum")}</span>
+          <span class="macro">${macroTargetText("Carbs", totals.carbs, targets.carbs, "limit")}</span>
+          <span class="macro">${macroTargetText("Fat", totals.fat, targets.fat, "limit")}</span>
+          <span class="macro">${macroTargetText("Fibre", totals.fibre || 0, targets.fibre, "minimum")}</span>
         </div>
       </div>
     `;
@@ -2228,19 +2343,40 @@
 
   function calorieStatusClass(calories) {
     const value = Number(calories) || 0;
-    if (value > CALORIE_TARGET) return "over-target";
-    if (value >= CALORIE_TARGET * 0.9) return "near-target";
+    const target = currentMacroTargets().calories;
+    if (value > target) return "over-target";
+    if (value >= target * 0.9) return "near-target";
     return "within-target";
   }
 
   function calorieRemainingText(calories) {
-    const remaining = CALORIE_TARGET - (Number(calories) || 0);
+    const remaining = currentMacroTargets().calories - (Number(calories) || 0);
     if (remaining < 0) return `${Math.abs(Math.round(remaining))} cal over target`;
     return `${Math.round(remaining)} cal remaining`;
   }
 
+  function macroTargetText(label, current, target, mode) {
+    const used = round(Number(current) || 0);
+    const goal = round(Number(target) || 0);
+    if (!goal) return `${label}: ${used}g`;
+    const difference = goal - used;
+    if (mode === "minimum") {
+      return difference > 0
+        ? `${label}: ${used}/${goal}g, ${round(difference)}g to go`
+        : `${label}: ${used}/${goal}g, target hit`;
+    }
+    return difference < 0
+      ? `${label}: ${used}/${goal}g, ${round(Math.abs(difference))}g over`
+      : `${label}: ${used}/${goal}g, ${round(difference)}g left`;
+  }
+
+  function targetPercent(current, target) {
+    const safeTarget = Number(target) || 1;
+    return Math.min(100, Math.round(((Number(current) || 0) / safeTarget) * 100));
+  }
+
   function mealNameWithSource(recipe) {
-    const badge = recipe.source === "Custom" || recipe.source === "Product"
+    const badge = recipe.source === "Custom" || recipe.source === "Product" || recipe.source === "Ingredient"
       ? ` <span class="source-badge">${escapeHtml(recipe.source)}</span>`
       : "";
     return `${escapeHtml(recipe.name)}${badge}`;
@@ -2373,6 +2509,18 @@
     let index = 2;
     while (recipeByName.has(candidate)) {
       candidate = `${trimmed} - product ${index}`;
+      index += 1;
+    }
+    return candidate;
+  }
+
+  function uniqueIngredientName(name) {
+    const trimmed = name.trim();
+    if (!recipeByName.has(trimmed)) return trimmed;
+    let candidate = `${trimmed} - ingredient`;
+    let index = 2;
+    while (recipeByName.has(candidate)) {
+      candidate = `${trimmed} - ingredient ${index}`;
       index += 1;
     }
     return candidate;
