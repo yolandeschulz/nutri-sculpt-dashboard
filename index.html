@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="assets/icons/favicon.ico" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json?v=20260707-4">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-4" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-4">
+  <link rel="stylesheet" href="style.css?v=20260707-4">
 </head>
 <body>
   <header class="app-header">
@@ -23,6 +23,7 @@
     <div class="header-actions">
       <label class="select-label" for="activeWeek">Week</label>
       <select id="activeWeek" class="field compact"></select>
+      <button id="updateApp" class="ghost-button" type="button">Update app</button>
       <button id="resetDemo" class="ghost-button" type="button">Reset saved ticks</button>
     </div>
   </header>
@@ -198,7 +199,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <script src="data.js?v=20260707-4"></script>
+  <script src="app.js?v=20260707-4"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
+  const APP_VERSION = "20260707-4";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const DAYS = DATA.days;
   const STATUSES = ["Need to buy", "Already have", "Optional", "Skip"];
@@ -62,10 +63,12 @@
 
   let state = loadState();
 
+  window.nutriSculptPickMeal = handlePlanSlotChange;
   initialiseControls();
   attachEvents();
   registerServiceWorker();
   renderAll();
+  showAppVersion();
 
   function slug(value) {
     return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -118,7 +121,7 @@
   }
 
   function mergeState(base, saved) {
-    return {
+    const merged = {
       ...base,
       ...saved,
       plan: { ...base.plan, ...(saved.plan || {}) },
@@ -130,6 +133,18 @@
       reflections: { ...base.reflections, ...(saved.reflections || {}) },
       photoChecks: { ...base.photoChecks, ...(saved.photoChecks || {}) }
     };
+    cleanupBrokenPlanSlots(merged.plan);
+    return merged;
+  }
+
+  function cleanupBrokenPlanSlots(plan) {
+    Object.values(plan || {}).forEach((weekPlan) => {
+      Object.values(weekPlan || {}).forEach((dayPlan) => {
+        if (dayPlan && Object.prototype.hasOwnProperty.call(dayPlan, "undefined")) {
+          delete dayPlan.undefined;
+        }
+      });
+    });
   }
 
   function saveState() {
@@ -220,6 +235,10 @@
       toast("Dashboard reset.");
     });
 
+    document.querySelector("#updateApp").addEventListener("click", () => {
+      updateAppFiles();
+    });
+
     document.querySelector("#printToday").addEventListener("click", () => printView("today"));
     document.querySelector("#printWeek").addEventListener("click", () => printView("week"));
     document.querySelector("#printShopping").addEventListener("click", () => printView("shopping"));
@@ -269,13 +288,15 @@
   }
 
   function handlePlanSlotChange(target) {
-    const { day, slot } = target.dataset;
+    const day = target.dataset.day;
+    const slot = target.dataset.planSlot;
+    if (!day || !slot) return;
     ensurePlanDay(state.activeWeek, day);
-    if (state.plan[state.activeWeek][day][slot] === target.value) return;
+    const changed = state.plan[state.activeWeek][day][slot] !== target.value;
     state.plan[state.activeWeek][day][slot] = target.value;
     const recipe = recipeByName.get(target.value);
     saveAndRender(["today", "week", "shopping", "meals", "stats"]);
-    if (recipe) {
+    if (recipe && changed) {
       toast(`${recipe.name} added to ${day}. Shopping list updated.`);
     }
   }
@@ -348,7 +369,7 @@
     return `
       <div class="meal-slot">
         <label>${escapeHtml(slot.label)}</label>
-        <select class="field" data-plan-slot="${slot.key}" data-day="${escapeHtml(day)}">
+        <select class="field" data-plan-slot="${slot.key}" data-day="${escapeHtml(day)}" onchange="window.nutriSculptPickMeal(this)" oninput="window.nutriSculptPickMeal(this)">
           <option value="">Choose</option>
           ${options}
         </select>
@@ -738,10 +759,35 @@
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker.js").catch(() => {
+      navigator.serviceWorker.register(`./service-worker.js?v=${APP_VERSION}`).catch(() => {
         // The dashboard still works if a browser blocks local service workers.
       });
     });
+  }
+
+  async function updateAppFiles() {
+    try {
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+    } finally {
+      const base = window.location.pathname || "./index.html";
+      window.location.href = `${base}?v=${APP_VERSION}-${Date.now()}`;
+    }
+  }
+
+  function showAppVersion() {
+    const header = document.querySelector(".header-actions");
+    if (!header) return;
+    const version = document.createElement("span");
+    version.className = "app-version";
+    version.textContent = `App v${APP_VERSION}`;
+    header.appendChild(version);
   }
 
   function escapeHtml(value) {

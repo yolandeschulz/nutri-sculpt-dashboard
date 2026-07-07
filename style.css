@@ -94,6 +94,18 @@ button {
   font-weight: 700;
 }
 
+.app-version {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 main {
   width: min(1440px, 100%);
   margin: 0 auto;
@@ -828,6 +840,11 @@ h3 {
   .ghost-button {
     width: 100%;
     min-height: 48px;
+  }
+
+  .app-version {
+    justify-content: center;
+    width: 100%;
   }
 
   .check-item,
