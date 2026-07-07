@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-13";
+  const APP_VERSION = "20260707-14";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -1200,21 +1200,34 @@
 
     const messages = [];
     const localResults = searchSavedNutrition(query, barcode);
-    const searches = [searchOpenFoodFacts(query, barcode)];
+    const searches = [{ name: "Open Food Facts", promise: searchOpenFoodFacts(query, barcode) }];
     const usdaKey = state.nutritionLookup.usdaApiKey || valueOf(elements.usdaApiKey);
     if (query && usdaKey) {
-      searches.push(searchUsdaFoods(query, usdaKey));
+      searches.push({ name: "USDA", promise: searchUsdaFoods(query, usdaKey) });
     } else if (query) {
       messages.push("USDA not searched because no API key is saved.");
     }
 
     try {
-      const settled = await Promise.allSettled(searches);
-      const remoteResults = settled.flatMap((item) => item.status === "fulfilled" ? item.value : []);
-      const failures = settled.filter((item) => item.status === "rejected").length;
-      if (failures) messages.push(`${failures} source could not be reached.`);
+      const settled = await Promise.allSettled(searches.map((source) =>
+        source.promise.then((results) => ({ name: source.name, results }))
+      ));
+      const remoteResults = settled.flatMap((item) => item.status === "fulfilled" ? item.value.results : []);
+      const failedSources = settled
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => item.status === "rejected")
+        .map(({ index }) => searches[index].name);
+      const emptySources = settled
+        .filter((item) => item.status === "fulfilled" && !item.value.results.length)
+        .map((item) => item.value.name);
+      if (failedSources.length) messages.push(`${failedSources.join(", ")} could not be reached.`);
+      if (emptySources.length && remoteResults.length) messages.push(`${emptySources.join(", ")} searched but did not find a usable match.`);
 
-      state.nutritionLookup.results = rankLookupResults(dedupeLookupResults([...localResults, ...remoteResults]), product, barcode).slice(0, 8);
+      const rankedResults = rankLookupResults(dedupeLookupResults([...localResults, ...remoteResults]), product, barcode);
+      state.nutritionLookup.results = rankedResults.filter((result) => result.rankScore >= 25).slice(0, 8);
+      if (rankedResults.length && !state.nutritionLookup.results.length) {
+        messages.push("Sources searched, but only weak unrelated matches were found.");
+      }
       if (state.nutritionLookup.results.length) {
         const best = state.nutritionLookup.results[0];
         messages.unshift(`${best.confidenceLabel || "Recommended"} match found first. Check serving size, then use values or save product.`);
@@ -1242,7 +1255,7 @@
       if (barcodeJson?.status === 1 && barcodeJson.product) products.push({ ...barcodeJson.product, _matchBy: "barcode" });
     }
     if (query) {
-      const searchUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=5&fields=product_name,brands,quantity,serving_size,nutriments,code`;
+      const searchUrl = `https://world.openfoodfacts.org/api/v2/search?search_terms=${encodeURIComponent(query)}&page_size=5&fields=product_name,brands,quantity,serving_size,nutriments,code`;
       const searchJson = await fetchJson(searchUrl);
       products.push(...(searchJson?.products || []).map((product) => ({ ...product, _matchBy: "name" })));
     }
