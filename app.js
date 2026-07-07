@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-6";
+  const APP_VERSION = "20260707-7";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -91,6 +91,14 @@
     readLabelPhoto: document.querySelector("#readLabelPhoto"),
     labelOcrText: document.querySelector("#labelOcrText"),
     useLabelForIngredient: document.querySelector("#useLabelForIngredient"),
+    manualServingSize: document.querySelector("#manualServingSize"),
+    manualEnergyKj: document.querySelector("#manualEnergyKj"),
+    manualCalories: document.querySelector("#manualCalories"),
+    manualProtein: document.querySelector("#manualProtein"),
+    manualCarbs: document.querySelector("#manualCarbs"),
+    manualFat: document.querySelector("#manualFat"),
+    manualFibre: document.querySelector("#manualFibre"),
+    useManualLabelValues: document.querySelector("#useManualLabelValues"),
     customMealName: document.querySelector("#customMealName"),
     customMealType: document.querySelector("#customMealType"),
     customMealNotes: document.querySelector("#customMealNotes"),
@@ -351,6 +359,8 @@
     elements.labelPhoto?.addEventListener("change", handleLabelPhotoChange);
     elements.readLabelPhoto?.addEventListener("click", readLabelPhoto);
     elements.useLabelForIngredient?.addEventListener("click", useLabelForIngredient);
+    elements.useManualLabelValues?.addEventListener("click", useManualLabelValues);
+    elements.manualEnergyKj?.addEventListener("input", updateManualCaloriesFromKj);
     elements.addMealIngredient?.addEventListener("click", addIngredientToCustomMealDraft);
     elements.saveCustomMeal?.addEventListener("click", saveCustomMealFromDraft);
     elements.clearCustomMeal?.addEventListener("click", clearCustomMealDraft);
@@ -961,6 +971,7 @@
       const parsed = parseNutritionText(rawText);
       if (hasEnoughParsedNutrition(parsed)) {
         applyParsedNutrition(parsed);
+        fillManualLabelFields(parsed);
       } else {
         toast("Label text was unclear. Please type or correct the English values before saving.");
       }
@@ -977,9 +988,51 @@
   function useLabelForIngredient() {
     const text = elements.labelOcrText.value || "";
     state.labelScan.text = text;
-    applyParsedNutrition(parseNutritionText(text));
+    const parsed = parseNutritionText(text);
+    applyParsedNutrition(parsed);
+    fillManualLabelFields(parsed);
     saveAndRender(["custom"]);
     toast("Values copied into ingredient form for review.");
+  }
+
+  function useManualLabelValues() {
+    const calories = numberOf(elements.manualCalories) || kjToCalories(numberOf(elements.manualEnergyKj));
+    const parsed = {
+      servingSize: valueOf(elements.manualServingSize),
+      calories,
+      protein_g: numberOf(elements.manualProtein),
+      carbs_g: numberOf(elements.manualCarbs),
+      fat_g: numberOf(elements.manualFat),
+      fibre_g: numberOf(elements.manualFibre),
+      sourceNote: "English per-serving values typed from product nutrition label."
+    };
+    if (!hasEnoughParsedNutrition(parsed)) {
+      toast("Add at least calories or three macro values first.");
+      return;
+    }
+    applyParsedNutrition(parsed);
+    saveAndRender(["custom"]);
+    toast("Manual label values copied. Please confirm before saving.");
+  }
+
+  function updateManualCaloriesFromKj() {
+    if (!elements.manualCalories) return;
+    const kj = numberOf(elements.manualEnergyKj);
+    elements.manualCalories.value = kj > 0 ? kjToCalories(kj) : "";
+  }
+
+  function fillManualLabelFields(parsed) {
+    if (!parsed) return;
+    if (parsed.servingSize && !valueOf(elements.manualServingSize)) elements.manualServingSize.value = parsed.servingSize;
+    if (parsed.calories != null && !valueOf(elements.manualCalories)) elements.manualCalories.value = parsed.calories;
+    if (parsed.protein_g != null && !valueOf(elements.manualProtein)) elements.manualProtein.value = parsed.protein_g;
+    if (parsed.carbs_g != null && !valueOf(elements.manualCarbs)) elements.manualCarbs.value = parsed.carbs_g;
+    if (parsed.fat_g != null && !valueOf(elements.manualFat)) elements.manualFat.value = parsed.fat_g;
+    if (parsed.fibre_g != null && !valueOf(elements.manualFibre)) elements.manualFibre.value = parsed.fibre_g;
+  }
+
+  function kjToCalories(kj) {
+    return kj > 0 ? Math.round(kj / 4.184) : 0;
   }
 
   function hasEnoughParsedNutrition(parsed) {

@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-6">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-6" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-6">
-  <link rel="stylesheet" href="style.css?v=20260707-6">
+  <link rel="manifest" href="manifest.json?v=20260707-7">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-7" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-7">
+  <link rel="stylesheet" href="style.css?v=20260707-7">
 </head>
 <body>
   <header class="app-header">
@@ -165,6 +165,19 @@
             <button id="useLabelForIngredient" class="primary-button" type="button">Use values</button>
           </div>
           <textarea id="labelOcrText" class="notes-box" rows="7" placeholder="English-only nutrition text appears here. If the photo is unclear, type the serving values from the label here."></textarea>
+          <div class="manual-label-entry">
+            <h4>Per serving values</h4>
+            <div class="form-grid compact-grid">
+              <label>Serving size<input id="manualServingSize" class="field" placeholder="e.g. 50 g"></label>
+              <label>Energy kJ<input id="manualEnergyKj" class="field" type="number" min="0" step="1" placeholder="e.g. 768"></label>
+              <label>Calories<input id="manualCalories" class="field" type="number" min="0" step="1" placeholder="auto from kJ"></label>
+              <label>Protein g<input id="manualProtein" class="field" type="number" min="0" step="0.1"></label>
+              <label>Carbs g<input id="manualCarbs" class="field" type="number" min="0" step="0.1"></label>
+              <label>Fat g<input id="manualFat" class="field" type="number" min="0" step="0.1"></label>
+              <label>Fibre g<input id="manualFibre" class="field" type="number" min="0" step="0.1"></label>
+            </div>
+            <button id="useManualLabelValues" class="primary-button" type="button">Fill ingredient form</button>
+          </div>
         </section>
 
         <section class="custom-panel span-two">
@@ -290,7 +303,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-6"></script>
-  <script src="app.js?v=20260707-6"></script>
+  <script src="data.js?v=20260707-7"></script>
+  <script src="app.js?v=20260707-7"></script>
 </body>
 </html>
