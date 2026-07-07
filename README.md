@@ -4,13 +4,16 @@ Open `index.html` to use the dashboard.
 
 What it does:
 
-- Plans Week 1 to Week 8 meals from the PDF meal bank only.
-- Builds a shopping list from the selected meals.
+- Starts on a simple Today screen with meals, habits, workout guidance, notes, and daily targets.
+- Plans Week 1 to Week 8 meals from the PDF meal bank and saved custom foods.
+- Builds a Shopping List for Today, the next 3 days, the full week, or all selected meals.
 - Lets you mark ingredients as `Already have`, `Need to buy`, `Optional`, or `Skip`.
-- Shows which meals are easiest based on what is already available.
-- Tracks the daily PDF rules.
+- Keeps optional Create Meal tools for custom ingredients, packaged foods, nutrition label photos, and saved custom meals.
+- Tracks the daily PDF habits with friendlier wording.
 - Tracks the Monday, Wednesday, and Friday workouts from the PDF.
-- Tracks measurements, photo reminders, and weekly reflections.
+- Tracks measurements, photo reminders, weekly reflections, and questions for a coach.
+- Includes a Learn section with short expandable PDF reminders.
+- Keeps backup, restore, refresh, and clear-progress tools in Settings.
 - Works on desktop and cellphone screens, with phone-friendly bottom tabs and larger tap areas.
 - Saves progress locally in the browser.
 
@@ -18,8 +21,8 @@ Notes:
 
 - This dashboard uses only the extracted content from `nutri-SCULPT 8wk Challenge e-book.pdf`.
 - It does not add outside nutrition advice or extra meals.
-- If you change ingredient statuses in either Meals or Shopping, the dashboard updates the meal matching automatically.
-- Use the print buttons for Today, This Week, and Shopping List.
+- Nutrition lookup tools use saved foods, Open Food Facts, and USDA only when the user chooses to look up food data.
+- Use the print buttons for Today, My Week, and Shopping List.
 
 Phone install:
 

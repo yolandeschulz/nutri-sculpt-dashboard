@@ -1216,6 +1216,226 @@ h3 {
   transform: translateY(0);
 }
 
+.section-helper {
+  max-width: 720px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.macro-target-panel {
+  grid-template-columns: 1fr;
+  align-items: stretch;
+}
+
+.macro-target-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.summary-tile.is-filled {
+  background: linear-gradient(135deg, var(--white), var(--mint));
+  border-color: rgba(47, 125, 114, 0.3);
+}
+
+.summary-tile.is-empty {
+  background: rgba(255, 250, 240, 0.8);
+  border-style: dashed;
+}
+
+.tile-heading {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--teal);
+  font-weight: 850;
+}
+
+.today-meal-name {
+  color: var(--deep);
+  font-size: 16px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.empty-action {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.primary-macros .macro {
+  min-height: 30px;
+  font-size: 13px;
+}
+
+.nutrition-details summary {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.subtle-macro {
+  background: rgba(223, 245, 238, 0.62);
+  color: var(--muted);
+}
+
+.today-layout {
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.7fr);
+}
+
+.today-workout-panel {
+  grid-column: 2;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(216, 226, 220, 0.9);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.sunday-message {
+  border-color: rgba(244, 201, 93, 0.75);
+}
+
+.gentle-card,
+.flexible-note {
+  border: 1px solid rgba(104, 163, 87, 0.35);
+  background: var(--green-soft);
+  color: var(--deep);
+}
+
+.gentle-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: var(--radius);
+}
+
+.gentle-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.done-card {
+  border-color: rgba(47, 125, 114, 0.45);
+}
+
+.week-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.mini-summary {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--teal);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.mini-summary strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--deep);
+  font-size: 26px;
+}
+
+.day-card.flexible-day {
+  border-top-color: var(--green);
+  background: linear-gradient(180deg, var(--white), rgba(231, 245, 223, 0.7));
+}
+
+.advanced-tools {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--pale);
+}
+
+.advanced-tools summary {
+  color: var(--deep);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.advanced-section > summary {
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.advanced-section > summary h3 {
+  margin: 0;
+}
+
+.advanced-section > summary span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.learn-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.learn-card summary {
+  padding: 14px;
+  color: var(--deep);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.learn-card ul {
+  margin: 0;
+  padding: 0 18px 16px 34px;
+  color: var(--muted);
+}
+
+.learn-card li + li {
+  margin-top: 8px;
+}
+
+.settings-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.danger-button {
+  border-color: rgba(233, 111, 87, 0.5);
+  color: #8a392c;
+}
+
+.select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
 @media (max-width: 1100px) {
   .stats-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1260,8 +1480,13 @@ h3 {
   }
 
   .meal-summary-grid,
-  .week-grid {
+  .week-grid,
+  .week-summary {
     grid-template-columns: 1fr;
+  }
+
+  .today-workout-panel {
+    grid-column: 1;
   }
 
   .app-header {

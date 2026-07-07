@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-23";
+  const APP_VERSION = "20260708-24";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
@@ -29,16 +29,16 @@
     { key: "other", label: "Other", types: ["Other"], allowAll: true }
   ];
   const DAILY_CHECKS = [
-    { key: "water", label: "Water 2-3 L" },
-    { key: "proteinMoreThanCarbs", label: "Protein more than carbs" },
-    { key: "noSugaryDrinks", label: "No sugary drinks" },
-    { key: "noSweets", label: "No sweets" },
-    { key: "avoidedFastFood", label: "Avoided fast food" },
-    { key: "highProteinSnack", label: "High protein snack" },
-    { key: "active", label: "Workout/activity done" },
-    { key: "alcoholLimited", label: "Alcohol limited/avoided" },
-    { key: "mealTimes", label: "Meal times consistent" },
-    { key: "prepAhead", label: "Prep ahead" }
+    { key: "water", label: "I drank 2-3 L water" },
+    { key: "proteinMoreThanCarbs", label: "I prioritised protein today" },
+    { key: "noSugaryDrinks", label: "I avoided sugary drinks" },
+    { key: "noSweets", label: "I stayed within my treat plan" },
+    { key: "avoidedFastFood", label: "I followed my planned meals" },
+    { key: "highProteinSnack", label: "I had a high-protein snack" },
+    { key: "active", label: "I moved my body" },
+    { key: "alcoholLimited", label: "I limited/avoided alcohol" },
+    { key: "mealTimes", label: "I kept meal times consistent" },
+    { key: "prepAhead", label: "I planned ahead" }
   ];
 
   const pdfRecipes = DATA.recipes.map((recipe, index) => ({
@@ -64,22 +64,30 @@
     importPastedState: document.querySelector("#importPastedState"),
     clearShareImport: document.querySelector("#clearShareImport"),
     todayDay: document.querySelector("#todayDay"),
+    todayHeading: document.querySelector("#todayHeading"),
     todayTitle: document.querySelector("#todayTitle"),
     todayMeals: document.querySelector("#todayMeals"),
+    todaySundayMessage: document.querySelector("#todaySundayMessage"),
+    todayWorkout: document.querySelector("#todayWorkout"),
+    planNext3Days: document.querySelector("#planNext3Days"),
     todayNotes: document.querySelector("#todayNotes"),
     dailyChecks: document.querySelector("#dailyChecks"),
     weekGrid: document.querySelector("#weekGrid"),
+    weekSummary: document.querySelector("#weekSummary"),
     mealSearch: document.querySelector("#mealSearch"),
     mealTypeFilter: document.querySelector("#mealTypeFilter"),
     sortMeals: document.querySelector("#sortMeals"),
     mealCards: document.querySelector("#mealCards"),
     showAllShopping: document.querySelector("#showAllShopping"),
+    shoppingRange: document.querySelector("#shoppingRange"),
     shoppingList: document.querySelector("#shoppingList"),
     workoutPhase: document.querySelector("#workoutPhase"),
+    workoutSummary: document.querySelector("#workoutSummary"),
     workoutGrid: document.querySelector("#workoutGrid"),
     measurementTable: document.querySelector("#measurementTable"),
     photoGuidelines: document.querySelector("#photoGuidelines"),
     weeklyReflection: document.querySelector("#weeklyReflection"),
+    coachNotes: document.querySelector("#coachNotes"),
     rulesList: document.querySelector("#rulesList"),
     instructionsList: document.querySelector("#instructionsList"),
     statMeals: document.querySelector("#statMeals"),
@@ -301,6 +309,7 @@
       mealTypeFilter: "All",
       sortMeals: "pdf",
       showAllShopping: false,
+      shoppingRange: "next3",
       workoutPhase: "Week 1-2",
       macroTargets: { ...DEFAULT_MACRO_TARGETS },
       plan,
@@ -311,6 +320,7 @@
       workouts: {},
       measurements: {},
       reflections: {},
+      coachNotes: {},
       photoChecks: {},
       customIngredients: [],
       customProducts: [],
@@ -360,6 +370,7 @@
       workouts: { ...base.workouts, ...(saved.workouts || {}) },
       measurements: { ...base.measurements, ...(saved.measurements || {}) },
       reflections: { ...base.reflections, ...(saved.reflections || {}) },
+      coachNotes: { ...base.coachNotes, ...(saved.coachNotes || {}) },
       photoChecks: { ...base.photoChecks, ...(saved.photoChecks || {}) },
       macroTargets: normaliseMacroTargets(saved.macroTargets || base.macroTargets),
       servings: { ...base.servings, ...(saved.servings || {}) },
@@ -370,6 +381,9 @@
       nutritionLookup: { ...base.nutritionLookup, ...(saved.nutritionLookup || {}), results: Array.isArray(saved.nutritionLookup?.results) ? saved.nutritionLookup.results : [] },
       labelScan: { ...base.labelScan, ...(saved.labelScan || {}) }
     };
+    if (!saved.workoutPhase) {
+      merged.workoutPhase = phaseForWeek(Number(merged.activeWeek) || 1);
+    }
     cleanupBrokenPlanSlots(merged.plan);
     return merged;
   }
@@ -430,6 +444,7 @@
     elements.mealTypeFilter.value = state.mealTypeFilter;
     elements.sortMeals.value = state.sortMeals;
     elements.showAllShopping.checked = state.showAllShopping;
+    if (elements.shoppingRange) elements.shoppingRange.value = state.shoppingRange || "next3";
     elements.workoutPhase.value = state.workoutPhase;
     syncMacroTargetInputs();
     if (elements.usdaApiKey) elements.usdaApiKey.value = state.nutritionLookup?.usdaApiKey || "";
@@ -520,6 +535,11 @@
       saveAndRender(["shopping", "stats"]);
     });
 
+    elements.shoppingRange?.addEventListener("change", () => {
+      state.shoppingRange = elements.shoppingRange.value || "next3";
+      saveAndRender(["shopping"]);
+    });
+
     elements.workoutPhase.addEventListener("change", () => {
       state.workoutPhase = elements.workoutPhase.value;
       saveAndRender(["workouts", "stats"]);
@@ -528,6 +548,16 @@
     elements.weeklyReflection.addEventListener("input", () => {
       state.reflections[state.activeWeek] = elements.weeklyReflection.value;
       saveState();
+    });
+
+    elements.coachNotes?.addEventListener("input", () => {
+      state.coachNotes[state.activeWeek] = elements.coachNotes.value;
+      saveState();
+    });
+
+    elements.planNext3Days?.addEventListener("click", () => {
+      showView("week");
+      document.querySelector('.tab[data-view="week"]')?.focus();
     });
 
     [
@@ -547,14 +577,14 @@
     });
 
     document.querySelector("#resetDemo").addEventListener("click", () => {
-      if (!confirm("Clear saved ticks, notes, meal choices and shopping statuses for this dashboard?")) return;
+      if (!confirm("Clear saved progress, notes, meal choices and shopping statuses on this browser? This cannot be undone.")) return;
       const savedUsdaApiKey = state.nutritionLookup?.usdaApiKey || valueOf(elements.usdaApiKey);
       localStorage.removeItem(STORAGE_KEY);
       state = defaultState();
       state.nutritionLookup.usdaApiKey = savedUsdaApiKey;
       initialiseControls();
       saveAndRender();
-      toast("Dashboard reset. USDA key kept on this browser.");
+      toast("Dashboard reset. Advanced food database key kept on this browser.");
     });
 
     document.querySelector("#updateApp").addEventListener("click", () => {
@@ -591,7 +621,7 @@
     elements.clearCustomProduct?.addEventListener("click", () => {
       clearCustomProductForm();
       editingCustomProductId = "";
-      setNutritionLookupStatus("Product form cleared. Your USDA key is still saved on this browser.", "neutral");
+      setNutritionLookupStatus("Product form cleared. Your advanced food database key is still saved on this browser.", "neutral");
       saveAndRender(["custom"]);
       toast("Product form cleared.");
     });
@@ -718,6 +748,10 @@
       if (target.matches("[data-use-lookup-result]")) {
         applyLookupResult(Number(target.dataset.useLookupResult));
       }
+
+      if (target.matches("[data-jump-view]")) {
+        showView(target.dataset.jumpView);
+      }
     });
   }
 
@@ -777,21 +811,32 @@
     const day = state.todayDay;
     ensurePlanDay(state.activeWeek, day);
     const plan = state.plan[state.activeWeek][day];
-    elements.todayTitle.textContent = `Week ${state.activeWeek} - ${day}`;
+    if (elements.todayHeading) elements.todayHeading.textContent = `Today: Week ${state.activeWeek}, ${day}`;
+    elements.todayTitle.textContent = `What to eat today`;
+    if (elements.todaySundayMessage) {
+      const isSunday = day === "Sunday";
+      elements.todaySundayMessage.hidden = !isSunday;
+      elements.todaySundayMessage.textContent = isSunday
+        ? "Sunday is flexible. Choose meals that still support your goal, use leftovers, repeat a favourite meal, or add your own meal. Tracking is optional today."
+        : "";
+    }
     elements.todayNotes.value = state.notes[noteKey()] || "";
     elements.todayMeals.innerHTML = SLOTS.map((slot) => {
       const recipe = recipeByName.get(plan[slot.key]);
       const scaledRecipe = recipe ? scaledRecipeForSlot(day, slot.key) : null;
       return `
-        <article class="summary-tile">
-          <strong>${escapeHtml(slot.label)}</strong>
-          <div>${recipe ? mealNameWithSource(recipe) : "Choose in This Week"}</div>
-          ${scaledRecipe ? macroHtml(scaledRecipe) : ""}
+        <article class="summary-tile ${recipe ? "is-filled" : "is-empty"}">
+          <div class="tile-heading">${escapeHtml(slot.label)}</div>
+          <div class="today-meal-name">${recipe ? mealNameWithSource(recipe) : "Add a meal for today"}</div>
+          ${scaledRecipe ? macroPriorityHtml(scaledRecipe) : `<div class="empty-action">Choose this meal in My Week</div>`}
         </article>
       `;
     }).join("");
     if (elements.todayTotals) {
       elements.todayTotals.innerHTML = dailyTotalsHtml(day);
+    }
+    if (elements.todayWorkout) {
+      elements.todayWorkout.innerHTML = todayWorkoutHtml(day);
     }
 
     const currentChecks = state.daily[dailyKey(state.activeWeek, day)] || {};
@@ -804,16 +849,23 @@
   }
 
   function renderWeek() {
+    if (elements.weekSummary) {
+      elements.weekSummary.innerHTML = weeklySummaryHtml();
+    }
     elements.weekGrid.innerHTML = DAYS.map((day) => {
       ensurePlanDay(state.activeWeek, day);
       const dayPlan = state.plan[state.activeWeek][day];
       const meals = selectedMealsForDay(day);
       const macros = sumMacros(meals);
+      const isSunday = day === "Sunday";
       return `
-        <article class="day-card">
-          <h3>${escapeHtml(day)}</h3>
+        <article class="day-card ${isSunday ? "flexible-day" : ""}">
+          <h3>${escapeHtml(isSunday ? "Sunday - Flexible day" : day)}</h3>
+          ${isSunday ? `<p class="item-meta">Tracking is optional. Use leftovers, repeat a favourite, or add your own meal.</p>` : ""}
           ${SLOTS.map((slot) => mealSelectHtml(day, slot, dayPlan[slot.key])).join("")}
-          <div class="day-macros ${calorieStatusClass(macros.calories)}">${macroSummary(macros)} | ${calorieRemainingText(macros.calories)}</div>
+          ${isSunday && !meals.length
+            ? `<div class="day-macros flexible-note">Flexible day - blank is okay.</div>`
+            : `<div class="day-macros ${calorieStatusClass(macros.calories)}">${macroSummary(macros)} | ${calorieRemainingText(macros.calories)}</div>`}
         </article>
       `;
     }).join("");
@@ -868,8 +920,31 @@
   function emptyMealPreviewHtml(slot) {
     return `
       <div class="selected-meal-preview">
-        Pick a ${escapeHtml(slot.label.toLowerCase())} to fill this card and update the shopping list.
+        Choose this ${escapeHtml(slot.label.toLowerCase())} in My Week to update the shopping list.
       </div>
+    `;
+  }
+
+  function weeklySummaryHtml() {
+    const plannedCount = DAYS.reduce((count, day) => {
+      ensurePlanDay(state.activeWeek, day);
+      return count + SLOTS.filter((slot) => state.plan[state.activeWeek][day]?.[slot.key]).length;
+    }, 0);
+    const workoutCount = completedWorkoutDaysForWeek();
+    const habitPercent = weeklyDailyPercent();
+    return `
+      <article class="mini-summary">
+        <span class="stat-label">Meals planned</span>
+        <strong>${plannedCount}</strong>
+      </article>
+      <article class="mini-summary">
+        <span class="stat-label">Workouts done</span>
+        <strong>${workoutCount}/3</strong>
+      </article>
+      <article class="mini-summary">
+        <span class="stat-label">Daily habits</span>
+        <strong>${habitPercent}%</strong>
+      </article>
     `;
   }
 
@@ -904,14 +979,14 @@
         <div class="meal-card-header">
           <div>
             <h3>${escapeHtml(recipe.name)}</h3>
-            ${macroHtml(recipe)}
+            ${macroPriorityHtml(recipe)}
           </div>
           <div class="meal-card-actions">
             ${mealCardEditButton(recipe)}
-            <span class="type-badge">${escapeHtml(recipe.source === "Custom" ? "Custom" : recipe.type)}</span>
+            <span class="type-badge">${escapeHtml(sourceLabel(recipe))}</span>
           </div>
         </div>
-        ${recipe.source === "Custom" ? `<p class="item-meta">User-added meal. Source values come from confirmed ingredients.</p>` : ""}
+        ${recipe.source === "Custom" ? `<p class="item-meta">My custom meal. Source values come from confirmed ingredients.</p>` : ""}
         ${recipe.notes ? `<p class="item-meta">${escapeHtml(recipe.notes)}</p>` : ""}
         <ul class="ingredients">
           ${(recipe.ingredients || []).map((ingredient) => ingredientRowHtml(ingredient, false)).join("")}
@@ -938,13 +1013,14 @@
   }
 
   function renderShopping() {
-    const items = aggregateShopping(state.showAllShopping ? "all" : "selected");
+    const scope = state.showAllShopping ? "all" : (state.shoppingRange || "next3");
+    const items = aggregateShopping(scope);
     if (!items.length) {
       elements.shoppingList.innerHTML = `
         <section class="shopping-category">
           <h3>No meals selected yet</h3>
           <div class="shopping-item">
-            <div class="item-title">Go to This Week and choose meals first.</div>
+            <div class="item-title">No meals selected yet. Go to My Week and choose meals, or start with the next 3 days.</div>
             <div></div><div></div><div></div>
           </div>
         </section>
@@ -989,6 +1065,10 @@
   function renderWorkouts() {
     const phase = state.workoutPhase;
     const byDay = groupBy(DATA.workouts.filter((workout) => workout.phase === phase), "day");
+    const workoutCount = completedWorkoutDaysForWeek();
+    if (elements.workoutSummary) {
+      elements.workoutSummary.textContent = `This week: ${workoutCount}/3 workouts done. Complete 3 workouts this week. Extra movement is optional.`;
+    }
     elements.workoutGrid.innerHTML = Object.entries(byDay).map(([day, workouts]) => `
       <section class="workout-day">
         <h3>${escapeHtml(day)} - ${escapeHtml(workouts[0].focus)}</h3>
@@ -1029,6 +1109,9 @@
       `;
     }).join("");
     elements.weeklyReflection.value = state.reflections[state.activeWeek] || "";
+    if (elements.coachNotes) {
+      elements.coachNotes.value = state.coachNotes?.[state.activeWeek] || "";
+    }
   }
 
   function measurementTableHtml() {
@@ -1371,7 +1454,7 @@
     updateRecipeIndexes();
     initialiseControls();
     saveAndRender();
-    toast(`${product.name} saved. It is now available in This Week.`);
+    toast(`${product.name} saved. It is now available in My Week.`);
   }
 
   function editCustomProduct(id) {
@@ -1556,8 +1639,8 @@
   function saveUsdaApiKey() {
     state.nutritionLookup.usdaApiKey = valueOf(elements.usdaApiKey);
     const message = state.nutritionLookup.usdaApiKey
-      ? "USDA search enabled on this browser."
-      : "USDA key cleared. Open Food Facts will still work.";
+      ? "Advanced food database search enabled on this browser."
+      : "Advanced food database key cleared. Open Food Facts will still work.";
     setNutritionLookupStatus(message, state.nutritionLookup.usdaApiKey ? "success" : "neutral");
     saveAndRender(["custom"]);
     toast(message);
@@ -1594,7 +1677,7 @@
     if (query && usdaKey) {
       searches.push({ name: "USDA", promise: searchUsdaFoods(query, usdaKey) });
     } else if (query) {
-      messages.push("USDA not searched because no API key is saved.");
+        messages.push("Advanced food database not searched because no key is saved.");
     }
 
     try {
@@ -1626,7 +1709,7 @@
         messages.push("MyFitnessPal official API is not connected, so it is not searched automatically.");
         setNutritionLookupStatus(messages.join(" "), "success");
       } else {
-        messages.unshift(`No reliable nutrition match found. Try a more exact brand name${lookupTarget === "product" ? ", a barcode" : ""}, USDA key, or the nutrition label photo.`);
+        messages.unshift(`No reliable nutrition match found. Try a more exact brand name${lookupTarget === "product" ? ", a barcode" : ""}, an advanced food database key, or the nutrition label photo.`);
         messages.push("MyFitnessPal official API is not connected, so it is not searched automatically.");
         setNutritionLookupStatus(messages.join(" "), "warning");
       }
@@ -1657,7 +1740,7 @@
     const button = target === "ingredient" ? elements.findIngredientNutrition : elements.findProductNutrition;
     if (!button) return;
     button.disabled = busy;
-    button.textContent = busy ? "Searching..." : (target === "ingredient" ? "Run ingredient lookup" : "Run safe lookup");
+    button.textContent = busy ? "Searching..." : (target === "ingredient" ? "Look up ingredient" : "Look up nutrition");
   }
 
   async function searchOpenFoodFacts(query, barcode) {
@@ -2651,8 +2734,34 @@
   }
 
   function renderRules() {
-    elements.rulesList.innerHTML = DATA.daily_guidelines.map((text) => `<div class="rule-card">${escapeHtml(text)}</div>`).join("");
-    elements.instructionsList.innerHTML = DATA.meal_plan_instructions.map((text) => `<div class="rule-card">${escapeHtml(text)}</div>`).join("");
+    const habitGroups = [
+      { title: "How the challenge works", items: DATA.daily_guidelines.slice(0, 3) },
+      { title: "Daily habits", items: DATA.daily_guidelines.slice(3, 9) },
+      { title: "Treats and drinks", items: DATA.daily_guidelines.slice(9, 14) },
+      { title: "Protein and snacks", items: DATA.daily_guidelines.slice(14) }
+    ];
+    const instructionGroups = [
+      { title: "Meal plan instructions", items: DATA.meal_plan_instructions.slice(0, 3) },
+      { title: "Food weighing: raw vs cooked", items: DATA.meal_plan_instructions.slice(3, 5) },
+      { title: "Swaps", items: DATA.meal_plan_instructions.slice(5, 7) },
+      { title: "Drinks allowed", items: DATA.meal_plan_instructions.slice(7, 8) },
+      { title: "Snack guide", items: DATA.meal_plan_instructions.slice(8, 9) },
+      { title: "Photo guide", items: DATA.photo_guidelines },
+      { title: "Flexible Sunday", items: ["Sunday is flexible. Choose meals that still support your goal, use leftovers, repeat a favourite meal, or add your own meal. Tracking is optional today."] }
+    ];
+    elements.rulesList.innerHTML = habitGroups.map(learnCardHtml).join("");
+    elements.instructionsList.innerHTML = instructionGroups.map(learnCardHtml).join("");
+  }
+
+  function learnCardHtml(group) {
+    return `
+      <details class="rule-card learn-card">
+        <summary>${escapeHtml(group.title)}</summary>
+        <ul>
+          ${(group.items || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+        </ul>
+      </details>
+    `;
   }
 
   function renderStats() {
@@ -2674,7 +2783,7 @@
   }
 
   function aggregateShopping(scope) {
-    const included = scope === "all" ? recipes : selectedRecipesForWeek();
+    const included = recipesForShoppingScope(scope);
     const map = new Map();
     for (const recipe of included) {
       for (const ingredient of recipe.ingredients || []) {
@@ -2699,6 +2808,31 @@
         const categorySort = CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category);
         return categorySort || a.item.localeCompare(b.item);
       });
+  }
+
+  function recipesForShoppingScope(scope) {
+    if (scope === "all") return recipes;
+    if (scope === "today") return selectedMealsForDay(state.todayDay);
+    if (scope === "next3") return selectedRecipesForDays(nextPlanDays(state.todayDay, 3));
+    return selectedRecipesForWeek();
+  }
+
+  function selectedRecipesForDays(days) {
+    const selected = [];
+    for (const day of days) {
+      ensurePlanDay(state.activeWeek, day);
+      const dayPlan = state.plan[state.activeWeek][day] || {};
+      for (const slot of SLOTS) {
+        const recipe = recipeByName.get(dayPlan[slot.key]);
+        if (recipe) selected.push(scaledRecipeForSlot(day, slot.key) || recipe);
+      }
+    }
+    return selected;
+  }
+
+  function nextPlanDays(startDay, count) {
+    const startIndex = Math.max(0, DAYS.indexOf(startDay));
+    return Array.from({ length: count }, (_, index) => DAYS[(startIndex + index) % DAYS.length]);
   }
 
   function selectedRecipeNamesForWeek() {
@@ -2835,6 +2969,31 @@
     `;
   }
 
+  function todayWorkoutHtml(day) {
+    const workoutDays = ["Monday", "Wednesday", "Friday"];
+    if (!workoutDays.includes(day)) {
+      return `
+        <div class="gentle-card">
+          <strong>Gentle movement day</strong>
+          <p>There is no scheduled workout today. A walk, stretch, or easy movement is enough if your body feels up to it.</p>
+        </div>
+      `;
+    }
+    const phase = phaseForWeek(state.activeWeek);
+    const workouts = DATA.workouts.filter((workout) => workout.phase === phase && workout.day === day);
+    if (!workouts.length) {
+      return `<div class="gentle-card"><strong>No workout found for today</strong><p>Check the Workouts tab for this week's plan.</p></div>`;
+    }
+    const allDone = workouts.every((workout) => state.workouts[workoutKey(workout)]);
+    return `
+      <div class="gentle-card ${allDone ? "done-card" : ""}">
+        <strong>${escapeHtml(day)}: ${escapeHtml(workouts[0].focus)}</strong>
+        <p>${escapeHtml(workouts[0].duration)}. Complete this workout when it suits you today.</p>
+        <button class="ghost-button small-button" type="button" data-jump-view="workouts">${allDone ? "Review workout" : "Go to workout"}</button>
+      </div>
+    `;
+  }
+
   function allKnownIngredients() {
     const map = new Map();
     for (const recipe of pdfRecipes) {
@@ -2919,9 +3078,16 @@
 
   function mealNameWithSource(recipe) {
     const badge = recipe.source === "Custom" || recipe.source === "Product" || recipe.source === "Ingredient"
-      ? ` <span class="source-badge">${escapeHtml(recipe.source)}</span>`
+      ? ` <span class="source-badge">${escapeHtml(sourceLabel(recipe))}</span>`
       : "";
     return `${escapeHtml(recipe.name)}${badge}`;
+  }
+
+  function sourceLabel(recipe) {
+    if (recipe.source === "Custom") return "My custom meal";
+    if (recipe.source === "Product") return "Packaged food";
+    if (recipe.source === "Ingredient") return "Single ingredient";
+    return "Plan meal";
   }
 
   function mealScore(recipe) {
@@ -2952,6 +3118,31 @@
     ].filter(([, value]) => value !== null && value !== "");
     if (!macros.length) return `<div class="macro-row"><span class="macro">Macros follow product instructions</span></div>`;
     return `<div class="macro-row">${macros.map(([label, value]) => `<span class="macro">${label}: ${escapeHtml(value)}</span>`).join("")}</div>`;
+  }
+
+  function macroPriorityHtml(recipe) {
+    if (recipe.calories == null && recipe.protein_g == null) {
+      return `<div class="macro-row"><span class="macro">Macros follow product instructions</span></div>`;
+    }
+    const secondary = [
+      ["Carbs", recipe.carbs_g == null ? null : `${recipe.carbs_g}g`],
+      ["Fat", recipe.fat_g == null ? null : `${recipe.fat_g}g`],
+      ["Fibre", recipe.fibre_g == null ? null : `${recipe.fibre_g}g`]
+    ].filter(([, value]) => value !== null && value !== "");
+    return `
+      <div class="macro-row primary-macros">
+        ${recipe.calories == null ? "" : `<span class="macro">Cal: ${escapeHtml(Math.round(Number(recipe.calories) || 0))}</span>`}
+        ${recipe.protein_g == null ? "" : `<span class="macro">Protein: ${escapeHtml(recipe.protein_g)}g</span>`}
+      </div>
+      ${secondary.length ? `
+        <details class="nutrition-details">
+          <summary>More nutrition</summary>
+          <div class="macro-row secondary-macros">
+            ${secondary.map(([label, value]) => `<span class="macro subtle-macro">${label}: ${escapeHtml(value)}</span>`).join("")}
+          </div>
+        </details>
+      ` : ""}
+    `;
   }
 
   function sumMacros(meals) {
@@ -3205,10 +3396,11 @@
   }
 
   function copyShoppingList() {
-    const items = aggregateShopping("selected").filter((item) => ingredientStatus(item.item) === "Need to buy");
+    const scope = state.showAllShopping ? "all" : (state.shoppingRange || "next3");
+    const items = aggregateShopping(scope).filter((item) => ingredientStatus(item.item) === "Need to buy");
     const text = items.length
       ? items.map((item) => `- ${item.item} (${item.category}) - ${item.amounts.join("; ")} - used in ${item.usedIn.join("; ")}`).join("\n")
-      : "No selected shopping items yet.";
+      : "No shopping items in this view yet.";
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(() => toast("Shopping list copied."));
@@ -3260,14 +3452,14 @@
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    toast("Saved dashboard exported. Send that file to your mom.");
+    toast("Dashboard backup saved.");
   }
 
   async function copySavedDashboardText() {
     const payload = buildSharePayload();
     const text = [
       "nutri-SCULPT saved dashboard data",
-      "Open the app, tap Paste saved text, paste this whole message, then tap Import pasted data.",
+      "Open the app, tap Settings, tap Restore from text, paste this whole message, then tap Restore pasted data.",
       "",
       JSON.stringify(payload)
     ].join("\n");
@@ -3277,7 +3469,7 @@
     try {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
-        toast("Share text copied. Paste it into WhatsApp for your mom.");
+        toast("Backup text copied.");
         return;
       }
     } catch {

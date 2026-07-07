@@ -8,42 +8,23 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-23">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-23" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-23">
-  <link rel="stylesheet" href="style.css?v=20260707-23">
+  <link rel="manifest" href="manifest.json?v=20260708-24">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260708-24" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260708-24">
+  <link rel="stylesheet" href="style.css?v=20260708-24">
 </head>
 <body>
   <header class="app-header">
     <div>
-      <p class="eyebrow">PDF tracker plus custom meals</p>
+      <p class="eyebrow">Daily challenge companion</p>
       <h1>nutri-SCULPT 8 Week Dashboard</h1>
-      <p class="subhead">Plan PDF meals, add confirmed custom meals, build the shopping list, tick off daily rules, and track progress in one place.</p>
+      <p class="subhead">Start with today, plan the next few days, and keep the PDF challenge simple on your phone.</p>
     </div>
     <div class="header-actions">
       <label class="select-label" for="activeWeek">Week</label>
       <select id="activeWeek" class="field compact"></select>
-      <button id="updateApp" class="ghost-button" type="button">Update app</button>
-      <button id="exportState" class="ghost-button" type="button">Export saved data</button>
-      <button id="copyStateText" class="ghost-button" type="button">Copy share text</button>
-      <button id="importState" class="ghost-button" type="button">Import saved data</button>
-      <button id="pasteStateText" class="ghost-button" type="button">Paste saved text</button>
-      <input id="importStateFile" type="file" accept="application/json,.json" hidden>
-      <button id="resetDemo" class="ghost-button" type="button">Reset saved ticks</button>
     </div>
   </header>
-
-  <section id="shareImportPanel" class="share-panel" hidden>
-    <div>
-      <h2>Paste saved dashboard text</h2>
-      <p>Use this when WhatsApp will not save the data file. Paste the full message here, then import it.</p>
-    </div>
-    <textarea id="shareImportText" class="notes-box" rows="7" placeholder="Paste the nutri-SCULPT saved data message here"></textarea>
-    <div class="inline-controls">
-      <button id="importPastedState" class="primary-button" type="button">Import pasted data</button>
-      <button id="clearShareImport" class="ghost-button" type="button">Clear</button>
-    </div>
-  </section>
 
   <main>
     <section class="stats-strip" aria-label="Challenge summary">
@@ -71,31 +52,34 @@
 
     <nav class="tabs" aria-label="Dashboard sections">
       <button class="tab active" data-view="today" type="button">Today</button>
-      <button class="tab" data-view="week" type="button">This Week</button>
+      <button class="tab" data-view="week" type="button">My Week</button>
       <button class="tab" data-view="meals" type="button">Meals</button>
-      <button class="tab" data-view="custom" type="button">Custom</button>
-      <button class="tab" data-view="shopping" type="button">Shopping</button>
+      <button class="tab" data-view="shopping" type="button">Shopping List</button>
       <button class="tab" data-view="workouts" type="button">Workouts</button>
       <button class="tab" data-view="progress" type="button">Progress</button>
-      <button class="tab" data-view="rules" type="button">PDF Rules</button>
+      <button class="tab" data-view="rules" type="button">Learn</button>
+      <button class="tab" data-view="custom" type="button">Create Meal</button>
+      <button class="tab" data-view="settings" type="button">Settings</button>
     </nav>
 
     <section id="view-today" class="view active">
       <div class="section-heading">
         <div>
           <p class="eyebrow">Daily control panel</p>
-          <h2>Today</h2>
+          <h2 id="todayHeading">Today</h2>
+          <p class="section-helper">Start here. Follow today's meals, tick your habits, and complete your workout if it is scheduled.</p>
         </div>
         <div class="inline-controls">
           <select id="todayDay" class="field"></select>
+          <button class="ghost-button" id="planNext3Days" type="button">Plan my next 3 days</button>
           <button class="primary-button" id="printToday" type="button">Print today</button>
         </div>
       </div>
-      <section class="macro-target-panel" aria-label="Daily calorie and macro targets">
-        <div>
+      <details class="macro-target-panel" aria-label="Daily calorie and macro targets">
+        <summary>
           <p class="eyebrow">Editable daily goals</p>
           <h3>Targets for the day</h3>
-        </div>
+        </summary>
         <div class="target-input-grid">
           <label>Calories<input id="targetCalories" class="field" type="number" min="0" step="10"></label>
           <label>Protein g<input id="targetProtein" class="field" type="number" min="0" step="1"></label>
@@ -104,7 +88,8 @@
           <label>Fibre g<input id="targetFibre" class="field" type="number" min="0" step="1"></label>
         </div>
         <button id="resetMacroTargets" class="ghost-button" type="button">Reset targets</button>
-      </section>
+      </details>
+      <div id="todaySundayMessage" class="info-band sunday-message" hidden></div>
       <div class="today-layout">
         <section class="today-plan" aria-label="Today's planned meals">
           <h3 id="todayTitle">Today</h3>
@@ -117,6 +102,10 @@
           <h3>Daily tick list</h3>
           <div id="dailyChecks" class="check-list"></div>
         </section>
+        <section class="today-workout-panel" aria-label="Today's workout">
+          <h3>Today's workout</h3>
+          <div id="todayWorkout"></div>
+        </section>
       </div>
     </section>
 
@@ -124,12 +113,14 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">Plan at least 3 days ahead</p>
-          <h2>This Week</h2>
+          <h2>My Week</h2>
+          <p class="section-helper">Plan at least 3 days ahead. Your shopping list updates automatically.</p>
         </div>
         <div class="inline-controls">
           <button class="primary-button" id="printWeek" type="button">Print weekly plan</button>
         </div>
       </div>
+      <div id="weekSummary" class="week-summary"></div>
       <div id="weekGrid" class="week-grid"></div>
     </section>
 
@@ -137,7 +128,8 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">PDF meals and saved custom meals</p>
-          <h2>Meal Customiser</h2>
+          <h2>Meals</h2>
+          <p class="section-helper">Browse the meals from your plan. You can also create your own version under Create Meal.</p>
         </div>
         <div class="meal-filters">
           <input id="mealSearch" class="field search" type="search" placeholder="Search meals or ingredients">
@@ -151,7 +143,7 @@
         </div>
       </div>
       <div class="info-band">
-        <strong>Customise safely:</strong> the PDF allows mix-and-match meals, meat swaps, and low-carb carb replacements. It also says nutrition changes when swaps are made.
+        <strong>Customise safely:</strong> the PDF allows mix-and-match meals, meat swaps, and low-carb carb replacements. Nutrition changes when swaps are made.
       </div>
       <div id="mealCards" class="meal-card-grid"></div>
     </section>
@@ -159,8 +151,9 @@
     <section id="view-custom" class="view">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">PDF bank plus confirmed custom items</p>
-          <h2>Custom Foods & Meals</h2>
+          <p class="eyebrow">Optional food tools</p>
+          <h2>Create Meal / Food Tools</h2>
+          <p class="section-helper">Use this section when you want to add your own food, packaged product or custom meal. These tools are optional.</p>
         </div>
       </div>
 
@@ -168,7 +161,7 @@
 
       <div class="custom-layout">
         <section class="custom-panel">
-          <h3>Custom Ingredient</h3>
+          <h3>Add ingredient</h3>
           <div class="form-grid">
             <label>Ingredient name<input id="customIngredientName" class="field" list="ingredientOptions" placeholder="e.g. Protein yoghurt"></label>
             <label>Brand<input id="customIngredientBrand" class="field" placeholder="Optional"></label>
@@ -179,21 +172,21 @@
             <label>Carbs g<input id="customIngredientCarbs" class="field" type="number" min="0" step="0.1"></label>
             <label>Fat g<input id="customIngredientFat" class="field" type="number" min="0" step="0.1"></label>
             <label>Fibre g<input id="customIngredientFibre" class="field" type="number" min="0" step="0.1"></label>
-            <label>Source<select id="customIngredientSource" class="field"></select></label>
-            <label class="wide-field">Source link or note<input id="customIngredientSourceUrl" class="field" placeholder="Optional"></label>
-            <label class="toggle-row wide-field"><input id="customIngredientVerified" type="checkbox"><span>Confirmed from label or verified source</span></label>
+            <label>Nutrition source<select id="customIngredientSource" class="field"></select></label>
+            <label class="wide-field">Where this info came from<input id="customIngredientSourceUrl" class="field" placeholder="Optional"></label>
+            <label class="toggle-row wide-field"><input id="customIngredientVerified" type="checkbox"><span>I checked this from a label or trusted source</span></label>
           </div>
           <div class="info-band compact-info">Use lookup for common ingredients. Use the label photo for packaged or local foods when the database match is unclear.</div>
           <div class="inline-controls">
             <button id="clearCustomIngredient" class="ghost-button" type="button">Clear form</button>
-            <button id="findIngredientNutrition" class="ghost-button" type="button">Run ingredient lookup</button>
+            <button id="findIngredientNutrition" class="ghost-button" type="button">Look up ingredient</button>
             <button id="saveCustomIngredient" class="primary-button" type="button">Save ingredient</button>
           </div>
         </section>
 
         <section class="custom-panel">
-          <h3>Custom Product</h3>
-          <div class="info-band compact-info">Use this for packaged foods or ready portions, for example Futurelife porridge, yoghurt cups, protein bars, or a soup tub. Saved products can be chosen in This Week.</div>
+          <h3>Add packaged food</h3>
+          <div class="info-band compact-info">Use this for packaged foods or ready portions, for example Futurelife porridge, yoghurt cups, protein bars, or a soup tub. Saved products can be chosen in My Week.</div>
           <div class="form-grid">
             <label>Product name<input id="customProductName" class="field" placeholder="e.g. Futurelife porridge"></label>
             <label>Brand<input id="customProductBrand" class="field" placeholder="Optional"></label>
@@ -206,33 +199,39 @@
             <label>Carbs g<input id="customProductCarbs" class="field" type="number" min="0" step="0.1"></label>
             <label>Fat g<input id="customProductFat" class="field" type="number" min="0" step="0.1"></label>
             <label>Fibre g<input id="customProductFibre" class="field" type="number" min="0" step="0.1"></label>
-            <label>Source<select id="customProductSource" class="field"></select></label>
-            <label class="wide-field">Source link or note<input id="customProductSourceUrl" class="field" placeholder="Optional"></label>
-            <label class="toggle-row wide-field"><input id="customProductVerified" type="checkbox"><span>Confirmed from label or verified source</span></label>
+            <label>Nutrition source<select id="customProductSource" class="field"></select></label>
+            <label class="wide-field">Where this info came from<input id="customProductSourceUrl" class="field" placeholder="Optional"></label>
+            <label class="toggle-row wide-field"><input id="customProductVerified" type="checkbox"><span>I checked this from a label or trusted source</span></label>
           </div>
           <div class="info-band compact-info">After lookup or label fill, changing the serving size automatically adjusts calories and macros. A plain number is treated as grams.</div>
-          <div class="lookup-tools">
-            <button id="findProductNutrition" class="ghost-button" type="button">Run safe lookup</button>
-            <label class="lookup-key">USDA key<input id="usdaApiKey" class="field" type="password" autocomplete="off" placeholder="Optional; saved only in this browser"></label>
-            <button id="saveUsdaApiKey" class="ghost-button" type="button">Save key</button>
-          </div>
-          <div id="lookupStatus" class="label-status">Search by food name, brand, or barcode. Open Food Facts works without a key; USDA needs a free API key saved in this browser.</div>
-          <div class="safe-source-grid">
-            <div><strong>1. Saved foods</strong><span>Checks anything already confirmed in this app.</span></div>
-            <div><strong>2. Open Food Facts</strong><span>Best for barcodes and packaged products.</span></div>
-            <div><strong>3. USDA</strong><span>Good for common foods; brand matches need review.</span></div>
-            <div><strong>4. Label photo</strong><span>Best fallback for local products.</span></div>
-          </div>
-          <div class="info-band compact-info">MyFitnessPal stays manual-only because there is no open approved API for this app. If you check it yourself, save it as a manual verified entry.</div>
-          <div id="lookupResults" class="lookup-results"></div>
+          <details class="advanced-tools">
+            <summary>Advanced nutrition lookup</summary>
+            <div class="lookup-tools">
+              <button id="findProductNutrition" class="ghost-button" type="button">Look up nutrition</button>
+              <label class="lookup-key">Advanced food database key<input id="usdaApiKey" class="field" type="password" autocomplete="off" placeholder="Optional; saved only in this browser"></label>
+              <button id="saveUsdaApiKey" class="ghost-button" type="button">Save key</button>
+            </div>
+            <div id="lookupStatus" class="label-status">Search by food name, brand, or barcode. Open Food Facts works without a key; USDA needs a free API key saved in this browser.</div>
+            <div class="safe-source-grid">
+              <div><strong>1. Saved foods</strong><span>Checks anything already confirmed in this app.</span></div>
+              <div><strong>2. Open Food Facts</strong><span>Best for barcodes and packaged products.</span></div>
+              <div><strong>3. USDA</strong><span>Good for common foods; brand matches need review.</span></div>
+              <div><strong>4. Label photo</strong><span>Best fallback for local products.</span></div>
+            </div>
+            <div class="info-band compact-info">MyFitnessPal stays manual-only because there is no open approved API for this app. If you check it yourself, save it as a manual verified entry.</div>
+            <div id="lookupResults" class="lookup-results"></div>
+          </details>
           <div class="inline-controls">
             <button id="clearCustomProduct" class="ghost-button" type="button">Clear form</button>
             <button id="saveCustomProduct" class="primary-button" type="button">Save product</button>
           </div>
         </section>
 
-        <section class="custom-panel">
-          <h3>Nutrition Label Photo</h3>
+        <details class="custom-panel advanced-section">
+          <summary>
+            <h3>Read label from photo</h3>
+            <span>Optional tool for nutrition tables</span>
+          </summary>
           <div class="info-band compact-info">For multi-language labels, the reader uses the English row name before the first slash and prefers the per-serving column. A straight, close-up photo of only the nutrition table works best; if the photo is angled or blurry, type the English serving values below.</div>
           <input id="labelPhoto" class="field" type="file" accept="image/*" capture="environment">
           <img id="labelPreview" class="label-preview" alt="Nutrition label preview" hidden>
@@ -265,10 +264,10 @@
               <button id="useLabelForIngredient" class="ghost-button" type="button">Try OCR for ingredient</button>
             </div>
           </details>
-        </section>
+        </details>
 
         <section class="custom-panel span-two">
-          <h3>Build Custom Meal</h3>
+          <h3>Create my own meal</h3>
           <div class="swap-helper">
             <div class="form-grid">
               <label>Swap from PDF meal<select id="pdfSwapMeal" class="field"></select></label>
@@ -278,7 +277,7 @@
               </div>
             </div>
             <div id="pdfSwapReference" class="custom-list"></div>
-            <button id="startSwapMeal" class="ghost-button" type="button">Start actual version</button>
+            <button id="startSwapMeal" class="ghost-button" type="button">Start from this plan meal</button>
           </div>
           <div class="form-grid">
             <label>Meal name<input id="customMealName" class="field" placeholder="e.g. Chicken salad custom"></label>
@@ -297,7 +296,7 @@
               <label>Carbs g<input id="mealIngredientCarbs" class="field" type="number" min="0" step="0.1"></label>
               <label>Fat g<input id="mealIngredientFat" class="field" type="number" min="0" step="0.1"></label>
               <label>Fibre g<input id="mealIngredientFibre" class="field" type="number" min="0" step="0.1"></label>
-              <label>Source<select id="mealIngredientSource" class="field"></select></label>
+            <label>Nutrition source<select id="mealIngredientSource" class="field"></select></label>
             </div>
             <div class="inline-controls">
               <button id="clearMealIngredient" class="ghost-button" type="button">Clear ingredient row</button>
@@ -309,22 +308,22 @@
           <div id="customMealBuilderList" class="custom-list"></div>
           <div class="inline-controls">
             <button id="clearCustomMeal" class="ghost-button" type="button">Clear meal</button>
-            <button id="saveCustomMeal" class="primary-button" type="button">Save custom meal</button>
+            <button id="saveCustomMeal" class="primary-button" type="button">Save my meal</button>
           </div>
         </section>
 
         <section class="custom-panel">
-          <h3>Saved Products</h3>
+          <h3>Saved packaged foods</h3>
           <div id="customProductsList" class="custom-list"></div>
         </section>
 
         <section class="custom-panel">
-          <h3>Saved Custom Meals</h3>
+          <h3>My saved custom meals</h3>
           <div id="customMealsList" class="custom-list"></div>
         </section>
 
         <section class="custom-panel">
-          <h3>Ingredient Bank</h3>
+          <h3>My ingredients</h3>
           <div id="customIngredientBank" class="custom-list"></div>
         </section>
       </div>
@@ -335,6 +334,7 @@
         <div>
           <p class="eyebrow">Built from selected meals</p>
           <h2>Shopping List</h2>
+          <p class="section-helper">Choose how much of the plan you want to shop for. Items update from My Week.</p>
         </div>
         <div class="inline-controls">
           <button class="ghost-button" id="copyShopping" type="button">Copy list</button>
@@ -345,6 +345,14 @@
         <label class="toggle-row">
           <input id="showAllShopping" type="checkbox">
           <span>Show full meal bank, not only selected meals</span>
+        </label>
+        <label class="select-row">Show
+          <select id="shoppingRange" class="field">
+            <option value="today">Today</option>
+            <option value="next3">Next 3 days</option>
+            <option value="week">Full week</option>
+            <option value="selected">All selected meals</option>
+          </select>
         </label>
         <div class="status-legend">
           <span class="pill need">Need to buy</span>
@@ -360,7 +368,8 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">Minimum 3x per week</p>
-          <h2>Workout Tracker</h2>
+          <h2>Workouts</h2>
+          <p class="section-helper" id="workoutSummary">Complete 3 workouts this week. Extra movement is optional.</p>
         </div>
         <select id="workoutPhase" class="field"></select>
       </div>
@@ -372,6 +381,7 @@
         <div>
           <p class="eyebrow">Track more than weight</p>
           <h2>Progress</h2>
+          <p class="section-helper">Progress is more than the scale. Track what you are comfortable with.</p>
         </div>
       </div>
       <div class="progress-layout">
@@ -381,9 +391,12 @@
         </section>
         <section class="photo-panel">
           <h3>Photo reminders</h3>
+          <div class="info-band compact-info">Progress photos are optional. You can take them on your own phone and send them directly to your coach if preferred. Do not upload or save photos anywhere you are not comfortable with.</div>
           <div id="photoGuidelines" class="check-list static"></div>
           <h3>Weekly reflection</h3>
-          <textarea id="weeklyReflection" class="notes-box" rows="7" placeholder="What worked? What was hard? What should change next week?"></textarea>
+          <textarea id="weeklyReflection" class="notes-box" rows="7" placeholder="What worked this week? What was hard? What do I need help with? What is my focus for next week?"></textarea>
+          <h3>Questions for my coach</h3>
+          <textarea id="coachNotes" class="notes-box" rows="7" placeholder="Food question, workout question, progress question, Friday check-in notes, wins this week, or what I need help with."></textarea>
         </section>
       </div>
     </section>
@@ -392,12 +405,13 @@
       <div class="section-heading">
         <div>
           <p class="eyebrow">Reference from the PDF</p>
-          <h2>PDF Rules and Instructions</h2>
+          <h2>Learn</h2>
+          <p class="section-helper">Short reminders from the PDF. Open a card when you need a quick answer.</p>
         </div>
       </div>
       <div class="rules-layout">
         <section>
-          <h3>Daily guidelines</h3>
+          <h3>Daily habits</h3>
           <div id="rulesList" class="rule-list"></div>
         </section>
         <section>
@@ -406,11 +420,44 @@
         </section>
       </div>
     </section>
+
+    <section id="view-settings" class="view">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Settings and backup</p>
+          <h2>Settings</h2>
+          <p class="section-helper">Use these tools when you want to back up, restore, refresh, or clear saved progress.</p>
+        </div>
+      </div>
+      <section class="settings-panel">
+        <h3>Backup and restore</h3>
+        <div class="settings-actions">
+          <button id="updateApp" class="ghost-button" type="button">Refresh app</button>
+          <button id="exportState" class="ghost-button" type="button">Back up my dashboard</button>
+          <button id="copyStateText" class="ghost-button" type="button">Copy backup text</button>
+          <button id="importState" class="ghost-button" type="button">Restore from file</button>
+          <button id="pasteStateText" class="ghost-button" type="button">Restore from text</button>
+          <input id="importStateFile" type="file" accept="application/json,.json" hidden>
+          <button id="resetDemo" class="ghost-button danger-button" type="button">Clear saved progress</button>
+        </div>
+        <section id="shareImportPanel" class="share-panel" hidden>
+          <div>
+            <h2>Restore from pasted backup text</h2>
+            <p>Use this when WhatsApp will not save the backup file. Paste the full message here, then restore it.</p>
+          </div>
+          <textarea id="shareImportText" class="notes-box" rows="7" placeholder="Paste the nutri-SCULPT backup text here"></textarea>
+          <div class="inline-controls">
+            <button id="importPastedState" class="primary-button" type="button">Restore pasted data</button>
+            <button id="clearShareImport" class="ghost-button" type="button">Clear</button>
+          </div>
+        </section>
+      </section>
+    </section>
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-23"></script>
-  <script src="app.js?v=20260707-23"></script>
+  <script src="data.js?v=20260708-24"></script>
+  <script src="app.js?v=20260708-24"></script>
 </body>
 </html>
