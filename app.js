@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-12";
+  const APP_VERSION = "20260707-13";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -84,6 +84,7 @@
     customIngredientSourceUrl: document.querySelector("#customIngredientSourceUrl"),
     customIngredientVerified: document.querySelector("#customIngredientVerified"),
     saveCustomIngredient: document.querySelector("#saveCustomIngredient"),
+    clearCustomIngredient: document.querySelector("#clearCustomIngredient"),
     customProductName: document.querySelector("#customProductName"),
     customProductBrand: document.querySelector("#customProductBrand"),
     customProductBarcode: document.querySelector("#customProductBarcode"),
@@ -110,6 +111,7 @@
     labelPhoto: document.querySelector("#labelPhoto"),
     labelPreview: document.querySelector("#labelPreview"),
     readLabelPhoto: document.querySelector("#readLabelPhoto"),
+    clearLabelPhoto: document.querySelector("#clearLabelPhoto"),
     labelReadStatus: document.querySelector("#labelReadStatus"),
     labelOcrText: document.querySelector("#labelOcrText"),
     useLabelForIngredient: document.querySelector("#useLabelForIngredient"),
@@ -139,6 +141,7 @@
     mealIngredientFibre: document.querySelector("#mealIngredientFibre"),
     mealIngredientSource: document.querySelector("#mealIngredientSource"),
     addMealIngredient: document.querySelector("#addMealIngredient"),
+    clearMealIngredient: document.querySelector("#clearMealIngredient"),
     customMealBuilderList: document.querySelector("#customMealBuilderList"),
     customMealTotals: document.querySelector("#customMealTotals"),
     saveCustomMeal: document.querySelector("#saveCustomMeal"),
@@ -443,6 +446,11 @@
     document.querySelector("#printShopping").addEventListener("click", () => printView("shopping"));
     document.querySelector("#copyShopping").addEventListener("click", copyShoppingList);
     elements.saveCustomIngredient?.addEventListener("click", saveCustomIngredientFromForm);
+    elements.clearCustomIngredient?.addEventListener("click", () => {
+      clearCustomIngredientForm();
+      saveAndRender(["custom"]);
+      toast("Ingredient form cleared.");
+    });
     elements.saveCustomProduct?.addEventListener("click", saveCustomProductFromForm);
     elements.clearCustomProduct?.addEventListener("click", () => {
       clearCustomProductForm();
@@ -455,6 +463,7 @@
     elements.saveUsdaApiKey?.addEventListener("click", saveUsdaApiKey);
     elements.labelPhoto?.addEventListener("change", handleLabelPhotoChange);
     elements.readLabelPhoto?.addEventListener("click", readLabelPhoto);
+    elements.clearLabelPhoto?.addEventListener("click", clearLabelForm);
     elements.useLabelForIngredient?.addEventListener("click", useLabelForIngredient);
     elements.useLabelForProduct?.addEventListener("click", useLabelForProduct);
     elements.useManualLabelValues?.addEventListener("click", useManualLabelValues);
@@ -463,6 +472,11 @@
     elements.pdfSwapMeal?.addEventListener("change", () => saveAndRender(["custom"]));
     elements.startSwapMeal?.addEventListener("click", startSwapMealFromPdf);
     elements.addMealIngredient?.addEventListener("click", addIngredientToCustomMealDraft);
+    elements.clearMealIngredient?.addEventListener("click", () => {
+      clearMealIngredientForm();
+      saveAndRender(["custom"]);
+      toast("Meal ingredient row cleared.");
+    });
     elements.saveCustomMeal?.addEventListener("click", saveCustomMealFromDraft);
     elements.clearCustomMeal?.addEventListener("click", clearCustomMealDraft);
 
@@ -1576,8 +1590,12 @@
 
   function clearCustomMealDraft() {
     state.customMealDraft = [];
+    if (elements.customMealName) elements.customMealName.value = "";
+    if (elements.customMealNotes) elements.customMealNotes.value = "";
+    if (elements.pdfSwapMeal) elements.pdfSwapMeal.value = "";
+    clearMealIngredientForm();
     saveAndRender(["custom"]);
-    toast("Custom meal draft cleared.");
+    toast("Custom meal form cleared.");
   }
 
   function deleteCustomMeal(id) {
@@ -1757,6 +1775,19 @@
     clearManualLabelFields();
     clearLabelDerivedIngredientFields();
     if (elements.labelOcrText) elements.labelOcrText.value = "";
+  }
+
+  function clearLabelForm() {
+    clearLabelReadValues();
+    state.labelScan.photo = "";
+    setLabelStatus("Upload a clear photo or type the per-serving values below.", "neutral");
+    if (elements.labelPhoto) elements.labelPhoto.value = "";
+    if (elements.labelPreview) {
+      elements.labelPreview.src = "";
+      elements.labelPreview.hidden = true;
+    }
+    saveAndRender(["custom"]);
+    toast("Nutrition label form cleared.");
   }
 
   function clearManualLabelFields() {
@@ -2369,6 +2400,8 @@
     ].forEach((input) => {
       if (input) input.value = "";
     });
+    if (elements.customIngredientCategory) elements.customIngredientCategory.value = "Protein";
+    if (elements.customIngredientSource) elements.customIngredientSource.value = "PDF ingredient list";
     if (elements.customIngredientVerified) elements.customIngredientVerified.checked = false;
   }
 
@@ -2384,6 +2417,8 @@
     ].forEach((input) => {
       if (input) input.value = "";
     });
+    if (elements.mealIngredientCategory) elements.mealIngredientCategory.value = "Protein";
+    if (elements.mealIngredientSource) elements.mealIngredientSource.value = "PDF ingredient list";
   }
 
   function valueOf(element) {

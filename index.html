@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-12">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-12" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-12">
-  <link rel="stylesheet" href="style.css?v=20260707-12">
+  <link rel="manifest" href="manifest.json?v=20260707-13">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-13" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-13">
+  <link rel="stylesheet" href="style.css?v=20260707-13">
 </head>
 <body>
   <header class="app-header">
@@ -152,7 +152,10 @@
             <label class="wide-field">Source link or note<input id="customIngredientSourceUrl" class="field" placeholder="Optional"></label>
             <label class="toggle-row wide-field"><input id="customIngredientVerified" type="checkbox"><span>Confirmed from label or verified source</span></label>
           </div>
-          <button id="saveCustomIngredient" class="primary-button" type="button">Save ingredient</button>
+          <div class="inline-controls">
+            <button id="clearCustomIngredient" class="ghost-button" type="button">Clear form</button>
+            <button id="saveCustomIngredient" class="primary-button" type="button">Save ingredient</button>
+          </div>
         </section>
 
         <section class="custom-panel">
@@ -202,6 +205,7 @@
           <img id="labelPreview" class="label-preview" alt="Nutrition label preview" hidden>
           <div class="inline-controls">
             <button id="readLabelPhoto" class="ghost-button" type="button">Read label</button>
+            <button id="clearLabelPhoto" class="ghost-button" type="button">Clear form</button>
           </div>
           <div id="labelReadStatus" class="label-status">Upload a clear photo or type the per-serving values below.</div>
           <div class="manual-label-entry">
@@ -261,7 +265,10 @@
               <label>Fibre g<input id="mealIngredientFibre" class="field" type="number" min="0" step="0.1"></label>
               <label>Source<select id="mealIngredientSource" class="field"></select></label>
             </div>
-            <button id="addMealIngredient" class="ghost-button" type="button">Add ingredient</button>
+            <div class="inline-controls">
+              <button id="clearMealIngredient" class="ghost-button" type="button">Clear ingredient row</button>
+              <button id="addMealIngredient" class="ghost-button" type="button">Add ingredient</button>
+            </div>
           </div>
 
           <div id="customMealTotals" class="today-totals"></div>
@@ -369,7 +376,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-12"></script>
-  <script src="app.js?v=20260707-12"></script>
+  <script src="data.js?v=20260707-13"></script>
+  <script src="app.js?v=20260707-13"></script>
 </body>
 </html>
