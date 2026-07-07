@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-10">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-10" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-10">
-  <link rel="stylesheet" href="style.css?v=20260707-10">
+  <link rel="manifest" href="manifest.json?v=20260707-11">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-11" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-11">
+  <link rel="stylesheet" href="style.css?v=20260707-11">
 </head>
 <body>
   <header class="app-header">
@@ -228,6 +228,17 @@
 
         <section class="custom-panel span-two">
           <h3>Build Custom Meal</h3>
+          <div class="swap-helper">
+            <div class="form-grid">
+              <label>Swap from PDF meal<select id="pdfSwapMeal" class="field"></select></label>
+              <div class="swap-helper-copy">
+                <strong>When only part of a PDF meal changes</strong>
+                <span>Start an actual version, then add only the foods she really ate. Example: yoghurt plus Futurelife instead of yoghurt plus granola.</span>
+              </div>
+            </div>
+            <div id="pdfSwapReference" class="custom-list"></div>
+            <button id="startSwapMeal" class="ghost-button" type="button">Start actual version</button>
+          </div>
           <div class="form-grid">
             <label>Meal name<input id="customMealName" class="field" placeholder="e.g. Chicken salad custom"></label>
             <label>Meal type<select id="customMealType" class="field"></select></label>
@@ -354,7 +365,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-10"></script>
-  <script src="app.js?v=20260707-10"></script>
+  <script src="data.js?v=20260707-11"></script>
+  <script src="app.js?v=20260707-11"></script>
 </body>
 </html>

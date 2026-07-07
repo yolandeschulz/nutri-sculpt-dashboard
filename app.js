@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-10";
+  const APP_VERSION = "20260707-11";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -125,6 +125,9 @@
     customMealName: document.querySelector("#customMealName"),
     customMealType: document.querySelector("#customMealType"),
     customMealNotes: document.querySelector("#customMealNotes"),
+    pdfSwapMeal: document.querySelector("#pdfSwapMeal"),
+    startSwapMeal: document.querySelector("#startSwapMeal"),
+    pdfSwapReference: document.querySelector("#pdfSwapReference"),
     mealIngredientName: document.querySelector("#mealIngredientName"),
     mealIngredientAmount: document.querySelector("#mealIngredientAmount"),
     mealIngredientCategory: document.querySelector("#mealIngredientCategory"),
@@ -182,7 +185,7 @@
       ingredients: [{
         item: name,
         amount,
-        category: product.category && product.category !== "Auto" ? product.category : inferProductCategory(name),
+        category: productCategory(product),
         calories: Number(product.calories) || 0,
         protein_g: Number(product.protein_g) || 0,
         carbs_g: Number(product.carbs_g) || 0,
@@ -347,6 +350,9 @@
     if (elements.customMealType) {
       elements.customMealType.innerHTML = SLOTS.flatMap((slot) => slot.types).filter((type, index, list) => list.indexOf(type) === index).map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join("");
     }
+    if (elements.pdfSwapMeal) {
+      elements.pdfSwapMeal.innerHTML = `<option value="">Choose PDF meal</option>${pdfRecipes.map((recipe) => `<option value="${escapeHtml(recipe.name)}">${escapeHtml(recipe.name)}</option>`).join("")}`;
+    }
 
     elements.activeWeek.value = state.activeWeek;
     elements.todayDay.value = state.todayDay;
@@ -443,6 +449,8 @@
     elements.useManualLabelValues?.addEventListener("click", useManualLabelValues);
     elements.useManualLabelForProduct?.addEventListener("click", useManualLabelValuesForProduct);
     elements.manualEnergyKj?.addEventListener("input", updateManualCaloriesFromKj);
+    elements.pdfSwapMeal?.addEventListener("change", () => saveAndRender(["custom"]));
+    elements.startSwapMeal?.addEventListener("click", startSwapMealFromPdf);
     elements.addMealIngredient?.addEventListener("click", addIngredientToCustomMealDraft);
     elements.saveCustomMeal?.addEventListener("click", saveCustomMealFromDraft);
     elements.clearCustomMeal?.addEventListener("click", clearCustomMealDraft);
@@ -814,6 +822,9 @@
     elements.customMealBuilderList.innerHTML = customMealDraftHtml();
     elements.customMealTotals.innerHTML = customMealTotalsHtml(state.customMealDraft || []);
     elements.customMealsList.innerHTML = customMealsListHtml();
+    if (elements.pdfSwapReference) {
+      elements.pdfSwapReference.innerHTML = pdfSwapReferenceHtml();
+    }
     if (elements.lookupStatus) {
       elements.lookupStatus.textContent = state.nutritionLookup?.status || "";
       elements.lookupStatus.className = `label-status ${state.nutritionLookup?.statusType || "neutral"}`;
@@ -933,6 +944,25 @@
       <div class="target-card ${calorieStatusClass(totals.calories)}">
         <strong>Custom meal total</strong>
         <span>${macroSummary(totals)}</span>
+      </div>
+    `;
+  }
+
+  function pdfSwapReferenceHtml() {
+    const recipe = pdfRecipes.find((item) => item.name === valueOf(elements.pdfSwapMeal));
+    if (!recipe) {
+      return `<div class="empty-panel">Choose a PDF meal to see its original total and ingredient list.</div>`;
+    }
+    return `
+      <div class="swap-reference">
+        <div>
+          <strong>${escapeHtml(recipe.name)}</strong>
+          <div class="item-meta">Original PDF total: ${nutritionLine(recipe)}</div>
+        </div>
+        <div class="info-band compact-info">The PDF gives this meal as one total, not per ingredient. For swaps, build the actual meal from products/ingredients she ate.</div>
+        <ul class="ingredients swap-ingredients">
+          ${(recipe.ingredients || []).map((ingredient) => `<li><span><strong>${escapeHtml(ingredient.item)}</strong><br><span class="item-meta">${escapeHtml(ingredient.amount || "")}</span></span></li>`).join("")}
+        </ul>
       </div>
     `;
   }
@@ -1466,6 +1496,23 @@
     initialiseControls();
     saveAndRender();
     toast(`${safeName} saved. It is now in the planner.`);
+  }
+
+  function startSwapMealFromPdf() {
+    const recipe = pdfRecipes.find((item) => item.name === valueOf(elements.pdfSwapMeal));
+    if (!recipe) {
+      toast("Choose the PDF meal first.");
+      return;
+    }
+    if (state.customMealDraft.length && !confirm("Clear the current custom meal draft and start this swapped meal?")) {
+      return;
+    }
+    state.customMealDraft = [];
+    elements.customMealName.value = `${recipe.name} - actual version`;
+    elements.customMealType.value = recipe.type || "Breakfast";
+    elements.customMealNotes.value = `Started from PDF meal "${recipe.name}". Original PDF total was ${nutritionLine(recipe)}. Actual macros below come only from the products/ingredients added because the PDF does not split macros per component.`;
+    saveAndRender(["custom"]);
+    toast("Now add the products she actually ate, then save the custom meal.");
   }
 
   function updateDraftIngredient(id, field, value) {
@@ -2200,7 +2247,7 @@
       item: product.name || product.item || "",
       brand: product.brand || "",
       amount: product.amount || product.servingSize || "1 serving",
-      category: product.category && product.category !== "Auto" ? product.category : inferProductCategory(product.name || product.item),
+      category: productCategory(product),
       calories: Number(product.calories) || 0,
       protein_g: Number(product.protein_g) || 0,
       carbs_g: Number(product.carbs_g) || 0,
@@ -2214,7 +2261,7 @@
 
   function inferProductType(name) {
     const text = String(name || "").toLowerCase();
-    if (/porridge|oats|cereal|futurelife|muesli|granola|weet-?bix|breakfast/.test(text)) return "Breakfast";
+    if (/porridge|oats|cereal|future\s*life|futurelife|muesli|granola|weet-?bix|breakfast/.test(text)) return "Breakfast";
     if (/yoghurt|yogurt|protein|biltong|egg|cheese|cottage|tuna|chicken/.test(text)) return "High Protein Snack";
     if (/bar|fruit|cracker|rice cake|popcorn|snack/.test(text)) return "Carb Snack";
     if (/meal|wrap|soup|salad|bowl|pasta|rice/.test(text)) return "Lunch or Dinner";
@@ -2225,10 +2272,17 @@
     const text = String(name || "").toLowerCase();
     if (/yoghurt|yogurt|milk|cheese|cottage/.test(text)) return "Dairy";
     if (/chicken|beef|biltong|egg|tuna|fish|protein/.test(text)) return "Protein";
+    if (/porridge|oats|cereal|future\s*life|futurelife|muesli|granola|bread|wrap|rice|pasta|cracker|bar|cake/.test(text)) return "Carbs";
     if (/fruit|apple|banana|berry|vegetable|veg|salad/.test(text)) return "Fruit and veg";
-    if (/porridge|oats|cereal|futurelife|muesli|granola|bread|wrap|rice|pasta|cracker|bar|cake/.test(text)) return "Carbs";
     if (/sauce|dressing|mayo|mayonnaise/.test(text)) return "Sauces";
     return "Pantry";
+  }
+
+  function productCategory(product) {
+    const name = product.name || product.item || "";
+    const inferred = inferProductCategory(name);
+    if (inferred === "Carbs" && product.category === "Fruit and veg") return "Carbs";
+    return product.category && product.category !== "Auto" ? product.category : inferred;
   }
 
   function hasMacroValues(ingredient) {

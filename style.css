@@ -567,6 +567,46 @@ h3 {
   background: var(--pale);
 }
 
+.swap-helper {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(244, 196, 83, 0.75);
+  border-radius: var(--radius);
+  background: var(--gold-soft);
+}
+
+.swap-helper-copy {
+  display: grid;
+  gap: 5px;
+  align-content: center;
+  padding: 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.swap-helper-copy strong {
+  color: var(--deep);
+  font-size: 15px;
+}
+
+.swap-reference {
+  display: grid;
+  gap: 10px;
+}
+
+.swap-ingredients {
+  max-height: 190px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--white);
+}
+
 .custom-list {
   display: grid;
   gap: 10px;

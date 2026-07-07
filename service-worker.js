@@ -1,4 +1,4 @@
-const CACHE_NAME = "nutri-sculpt-dashboard-v10";
+const CACHE_NAME = "nutri-sculpt-dashboard-v11";
 const APP_SHELL = [
   "./",
   "./index.html",
