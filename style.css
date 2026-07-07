@@ -387,6 +387,29 @@ h3 {
   width: 100%;
 }
 
+.selected-meal-preview {
+  display: grid;
+  gap: 7px;
+  min-height: 62px;
+  padding: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: rgba(255, 250, 240, 0.72);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.selected-meal-preview.is-filled {
+  border-style: solid;
+  border-color: rgba(47, 125, 114, 0.35);
+  background: linear-gradient(135deg, var(--mint), var(--cream));
+  color: var(--ink);
+}
+
+.selected-meal-preview strong {
+  color: var(--deep);
+}
+
 .day-macros {
   padding: 10px;
   background: var(--mint);

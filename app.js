@@ -228,10 +228,7 @@
     document.addEventListener("change", (event) => {
       const target = event.target;
       if (target.matches("[data-plan-slot]")) {
-        const { day, slot } = target.dataset;
-        ensurePlanDay(state.activeWeek, day);
-        state.plan[state.activeWeek][day][slot] = target.value;
-        saveAndRender(["today", "week", "shopping", "meals", "stats"]);
+        handlePlanSlotChange(target);
       }
 
       if (target.matches("[data-ingredient-status]")) {
@@ -262,6 +259,25 @@
         saveState();
       }
     });
+
+    document.addEventListener("input", (event) => {
+      const target = event.target;
+      if (target.matches("[data-plan-slot]")) {
+        handlePlanSlotChange(target);
+      }
+    });
+  }
+
+  function handlePlanSlotChange(target) {
+    const { day, slot } = target.dataset;
+    ensurePlanDay(state.activeWeek, day);
+    if (state.plan[state.activeWeek][day][slot] === target.value) return;
+    state.plan[state.activeWeek][day][slot] = target.value;
+    const recipe = recipeByName.get(target.value);
+    saveAndRender(["today", "week", "shopping", "meals", "stats"]);
+    if (recipe) {
+      toast(`${recipe.name} added to ${day}. Shopping list updated.`);
+    }
   }
 
   function saveAndRender(parts) {
@@ -324,6 +340,7 @@
   }
 
   function mealSelectHtml(day, slot, selected) {
+    const selectedRecipe = recipeByName.get(selected);
     const options = recipes
       .filter((recipe) => slot.types.includes(recipe.type))
       .map((recipe) => `<option value="${escapeHtml(recipe.name)}" ${recipe.name === selected ? "selected" : ""}>${escapeHtml(recipe.name)}</option>`)
@@ -335,6 +352,26 @@
           <option value="">Choose</option>
           ${options}
         </select>
+        ${selectedRecipe ? selectedMealPreviewHtml(selectedRecipe) : emptyMealPreviewHtml(slot)}
+      </div>
+    `;
+  }
+
+  function selectedMealPreviewHtml(recipe) {
+    const ingredients = (recipe.ingredients || []).slice(0, 4).map((ingredient) => ingredient.item).join(", ");
+    return `
+      <div class="selected-meal-preview is-filled" aria-live="polite">
+        <strong>${escapeHtml(recipe.name)}</strong>
+        ${macroHtml(recipe)}
+        <span class="item-meta">Shopping added: ${escapeHtml(ingredients)}${(recipe.ingredients || []).length > 4 ? "..." : ""}</span>
+      </div>
+    `;
+  }
+
+  function emptyMealPreviewHtml(slot) {
+    return `
+      <div class="selected-meal-preview">
+        Pick a ${escapeHtml(slot.label.toLowerCase())} to fill this card and update the shopping list.
       </div>
     `;
   }
