@@ -642,6 +642,51 @@ h3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.label-status {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--pale);
+  color: var(--deep);
+  font-weight: 800;
+}
+
+.label-status.warning {
+  border-color: rgba(233, 111, 87, 0.55);
+  background: var(--rose);
+  color: #8a392c;
+}
+
+.label-status.success {
+  border-color: rgba(104, 163, 87, 0.45);
+  background: var(--green-soft);
+  color: #2c5a24;
+}
+
+.ocr-details {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
+  overflow: hidden;
+}
+
+.ocr-details summary {
+  padding: 12px;
+  color: var(--deep);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ocr-details .notes-box {
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+}
+
+.ocr-details .ghost-button {
+  margin: 12px;
+}
+
 .meal-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));

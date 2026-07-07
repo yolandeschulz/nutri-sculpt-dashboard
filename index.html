@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260707-7">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-7" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-7">
-  <link rel="stylesheet" href="style.css?v=20260707-7">
+  <link rel="manifest" href="manifest.json?v=20260707-8">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260707-8" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260707-8">
+  <link rel="stylesheet" href="style.css?v=20260707-8">
 </head>
 <body>
   <header class="app-header">
@@ -162,9 +162,8 @@
           <img id="labelPreview" class="label-preview" alt="Nutrition label preview" hidden>
           <div class="inline-controls">
             <button id="readLabelPhoto" class="ghost-button" type="button">Read label</button>
-            <button id="useLabelForIngredient" class="primary-button" type="button">Use values</button>
           </div>
-          <textarea id="labelOcrText" class="notes-box" rows="7" placeholder="English-only nutrition text appears here. If the photo is unclear, type the serving values from the label here."></textarea>
+          <div id="labelReadStatus" class="label-status">Upload a clear photo or type the per-serving values below.</div>
           <div class="manual-label-entry">
             <h4>Per serving values</h4>
             <div class="form-grid compact-grid">
@@ -178,6 +177,11 @@
             </div>
             <button id="useManualLabelValues" class="primary-button" type="button">Fill ingredient form</button>
           </div>
+          <details class="ocr-details">
+            <summary>Show raw OCR text</summary>
+            <textarea id="labelOcrText" class="notes-box" rows="6" placeholder="Raw OCR text appears here only for troubleshooting. Use the per-serving boxes above for unclear photos."></textarea>
+            <button id="useLabelForIngredient" class="ghost-button" type="button">Try values from OCR text</button>
+          </details>
         </section>
 
         <section class="custom-panel span-two">
@@ -303,7 +307,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260707-7"></script>
-  <script src="app.js?v=20260707-7"></script>
+  <script src="data.js?v=20260707-8"></script>
+  <script src="app.js?v=20260707-8"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-7";
+  const APP_VERSION = "20260707-8";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -89,6 +89,7 @@
     labelPhoto: document.querySelector("#labelPhoto"),
     labelPreview: document.querySelector("#labelPreview"),
     readLabelPhoto: document.querySelector("#readLabelPhoto"),
+    labelReadStatus: document.querySelector("#labelReadStatus"),
     labelOcrText: document.querySelector("#labelOcrText"),
     useLabelForIngredient: document.querySelector("#useLabelForIngredient"),
     manualServingSize: document.querySelector("#manualServingSize"),
@@ -193,7 +194,9 @@
       customMealDraft: [],
       labelScan: {
         photo: "",
-        text: ""
+        text: "",
+        status: "Upload a clear photo or type the per-serving values below.",
+        statusType: "neutral"
       }
     };
   }
@@ -723,6 +726,10 @@
     if (elements.labelOcrText && elements.labelOcrText.value !== state.labelScan.text) {
       elements.labelOcrText.value = state.labelScan.text || "";
     }
+    if (elements.labelReadStatus) {
+      elements.labelReadStatus.textContent = state.labelScan.status || "Upload a clear photo or type the per-serving values below.";
+      elements.labelReadStatus.className = `label-status ${state.labelScan.statusType || "neutral"}`;
+    }
   }
 
   function customIngredientBankHtml() {
@@ -957,6 +964,8 @@
       toast("Upload a nutrition label photo first.");
       return;
     }
+    clearLabelReadValues();
+    setLabelStatus("Reading label photo...", "neutral");
     elements.readLabelPhoto.disabled = true;
     elements.readLabelPhoto.textContent = "Reading...";
     try {
@@ -972,12 +981,16 @@
       if (hasEnoughParsedNutrition(parsed)) {
         applyParsedNutrition(parsed);
         fillManualLabelFields(parsed);
+        setLabelStatus("Label read. Check the values, then save the ingredient.", "success");
       } else {
-        toast("Label text was unclear. Please type or correct the English values before saving.");
+        setLabelStatus("Photo not clear enough to read values. Type the per-serving values from the label below.", "warning");
+        clearLabelDerivedIngredientFields();
+        toast("Photo not clear enough. Type the serving values below.");
       }
       saveAndRender(["custom"]);
       if (hasEnoughParsedNutrition(parsed)) toast("Label read. Please confirm the values.");
     } catch {
+      setLabelStatus("Could not read this photo. Type the per-serving values from the label below.", "warning");
       toast("Could not read the photo. Type the label values manually.");
     } finally {
       elements.readLabelPhoto.disabled = false;
@@ -989,8 +1002,15 @@
     const text = elements.labelOcrText.value || "";
     state.labelScan.text = text;
     const parsed = parseNutritionText(text);
+    if (!hasEnoughParsedNutrition(parsed)) {
+      setLabelStatus("OCR text is not clear enough. Use the per-serving boxes instead.", "warning");
+      saveAndRender(["custom"]);
+      toast("OCR text is not clear enough.");
+      return;
+    }
     applyParsedNutrition(parsed);
     fillManualLabelFields(parsed);
+    setLabelStatus("Values copied from OCR text. Please confirm before saving.", "success");
     saveAndRender(["custom"]);
     toast("Values copied into ingredient form for review.");
   }
@@ -1011,6 +1031,7 @@
       return;
     }
     applyParsedNutrition(parsed);
+    setLabelStatus("Manual values copied. Please confirm before saving.", "success");
     saveAndRender(["custom"]);
     toast("Manual label values copied. Please confirm before saving.");
   }
@@ -1033,6 +1054,53 @@
 
   function kjToCalories(kj) {
     return kj > 0 ? Math.round(kj / 4.184) : 0;
+  }
+
+  function setLabelStatus(message, type) {
+    state.labelScan.status = message;
+    state.labelScan.statusType = type;
+    if (elements.labelReadStatus) {
+      elements.labelReadStatus.textContent = message;
+      elements.labelReadStatus.className = `label-status ${type || "neutral"}`;
+    }
+  }
+
+  function clearLabelReadValues() {
+    state.labelScan.text = "";
+    clearManualLabelFields();
+    clearLabelDerivedIngredientFields();
+    if (elements.labelOcrText) elements.labelOcrText.value = "";
+  }
+
+  function clearManualLabelFields() {
+    [
+      elements.manualServingSize,
+      elements.manualEnergyKj,
+      elements.manualCalories,
+      elements.manualProtein,
+      elements.manualCarbs,
+      elements.manualFat,
+      elements.manualFibre
+    ].forEach((input) => {
+      if (input) input.value = "";
+    });
+  }
+
+  function clearLabelDerivedIngredientFields() {
+    [
+      elements.customIngredientAmount,
+      elements.customIngredientCalories,
+      elements.customIngredientProtein,
+      elements.customIngredientCarbs,
+      elements.customIngredientFat,
+      elements.customIngredientFibre
+    ].forEach((input) => {
+      if (input) input.value = "";
+    });
+    if (elements.customIngredientSourceUrl && /English rows only|product nutrition label|nutrition column/i.test(elements.customIngredientSourceUrl.value)) {
+      elements.customIngredientSourceUrl.value = "";
+    }
+    if (elements.customIngredientVerified) elements.customIngredientVerified.checked = false;
   }
 
   function hasEnoughParsedNutrition(parsed) {
