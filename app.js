@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260707-11";
+  const APP_VERSION = "20260707-12";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const CALORIE_TARGET = 1500;
   const DAYS = DATA.days;
@@ -99,6 +99,7 @@
     customProductSourceUrl: document.querySelector("#customProductSourceUrl"),
     customProductVerified: document.querySelector("#customProductVerified"),
     saveCustomProduct: document.querySelector("#saveCustomProduct"),
+    clearCustomProduct: document.querySelector("#clearCustomProduct"),
     findProductNutrition: document.querySelector("#findProductNutrition"),
     usdaApiKey: document.querySelector("#usdaApiKey"),
     saveUsdaApiKey: document.querySelector("#saveUsdaApiKey"),
@@ -254,6 +255,7 @@
       nutritionLookup: {
         usdaApiKey: "",
         results: [],
+        productScaleBasis: null,
         status: "Search by product name, brand, or barcode. Open Food Facts works without a key; USDA needs a free API key saved in this browser.",
         statusType: "neutral"
       },
@@ -423,11 +425,13 @@
 
     document.querySelector("#resetDemo").addEventListener("click", () => {
       if (!confirm("Clear saved ticks, notes, meal choices and shopping statuses for this dashboard?")) return;
+      const savedUsdaApiKey = state.nutritionLookup?.usdaApiKey || valueOf(elements.usdaApiKey);
       localStorage.removeItem(STORAGE_KEY);
       state = defaultState();
+      state.nutritionLookup.usdaApiKey = savedUsdaApiKey;
       initialiseControls();
       saveAndRender();
-      toast("Dashboard reset.");
+      toast("Dashboard reset. USDA key kept on this browser.");
     });
 
     document.querySelector("#updateApp").addEventListener("click", () => {
@@ -440,6 +444,13 @@
     document.querySelector("#copyShopping").addEventListener("click", copyShoppingList);
     elements.saveCustomIngredient?.addEventListener("click", saveCustomIngredientFromForm);
     elements.saveCustomProduct?.addEventListener("click", saveCustomProductFromForm);
+    elements.clearCustomProduct?.addEventListener("click", () => {
+      clearCustomProductForm();
+      setNutritionLookupStatus("Product form cleared. Your USDA key is still saved on this browser.", "neutral");
+      saveAndRender(["custom"]);
+      toast("Product form cleared.");
+    });
+    elements.customProductAmount?.addEventListener("change", rescaleProductNutritionFromServing);
     elements.findProductNutrition?.addEventListener("click", findProductNutrition);
     elements.saveUsdaApiKey?.addEventListener("click", saveUsdaApiKey);
     elements.labelPhoto?.addEventListener("change", handleLabelPhotoChange);
@@ -1074,6 +1085,7 @@
     elements.customProductSource.value = product.source || "Manual entry - needs review";
     elements.customProductSourceUrl.value = product.sourceUrl || product.url || "";
     elements.customProductVerified.checked = Boolean(product.verified);
+    setProductScaleBasis(product.amount || product.servingSize || "", product);
   }
 
   function clearCustomProductForm() {
@@ -1095,6 +1107,39 @@
     if (elements.customProductCategory) elements.customProductCategory.value = "Auto";
     if (elements.customProductSource) elements.customProductSource.value = "Manual entry - needs review";
     if (elements.customProductVerified) elements.customProductVerified.checked = false;
+    state.nutritionLookup.results = [];
+    state.nutritionLookup.productScaleBasis = null;
+  }
+
+  function setProductScaleBasis(amount, source) {
+    const grams = servingGramsFromText(amount);
+    if (!grams || !source || !hasMacroValues(source)) {
+      state.nutritionLookup.productScaleBasis = null;
+      return;
+    }
+    state.nutritionLookup.productScaleBasis = {
+      grams,
+      amount,
+      calories: Number(source.calories) || 0,
+      protein_g: Number(source.protein_g) || 0,
+      carbs_g: Number(source.carbs_g) || 0,
+      fat_g: Number(source.fat_g) || 0,
+      fibre_g: Number(source.fibre_g) || 0
+    };
+  }
+
+  function rescaleProductNutritionFromServing() {
+    const basis = state.nutritionLookup?.productScaleBasis;
+    const targetGrams = servingGramsFromText(valueOf(elements.customProductAmount));
+    if (!basis?.grams || !targetGrams) return;
+    const factor = targetGrams / basis.grams;
+    elements.customProductCalories.value = Math.round((Number(basis.calories) || 0) * factor);
+    elements.customProductProtein.value = round((Number(basis.protein_g) || 0) * factor);
+    elements.customProductCarbs.value = round((Number(basis.carbs_g) || 0) * factor);
+    elements.customProductFat.value = round((Number(basis.fat_g) || 0) * factor);
+    elements.customProductFibre.value = round((Number(basis.fibre_g) || 0) * factor);
+    setNutritionLookupStatus(`Serving changed from ${basis.amount} to ${valueOf(elements.customProductAmount)}. Calories and macros were adjusted automatically.`, "success");
+    renderCustom();
   }
 
   function deleteCustomProduct(id) {
@@ -1396,8 +1441,10 @@
   }
 
   function servingGramsFromText(text) {
-    const match = String(text || "").match(/(\d+(?:[.,]\d+)?)\s*(g|gram|grams|ml|mℓ)/i);
-    return match ? numberFromValue(match[1]) : 0;
+    const value = String(text || "").trim();
+    const match = value.match(/(\d+(?:[.,]\d+)?)\s*(g|gram|grams|ml|mℓ)/i);
+    if (match) return numberFromValue(match[1]);
+    return /^\d+(?:[.,]\d+)?$/.test(value) ? numberFromValue(value) : 0;
   }
 
   function dedupeLookupResults(results) {
@@ -1782,6 +1829,13 @@
       elements.customProductSourceUrl.value = parsed.sourceNote;
     }
     elements.customProductVerified.checked = false;
+    setProductScaleBasis(parsed.servingSize || valueOf(elements.customProductAmount), {
+      calories: parsed.calories,
+      protein_g: parsed.protein_g,
+      carbs_g: parsed.carbs_g,
+      fat_g: parsed.fat_g,
+      fibre_g: parsed.fibre_g
+    });
   }
 
   function parseNutritionText(text) {
