@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260708-27";
+  const APP_VERSION = "20260708-28";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const MEMBER_CONFIG = window.NUTRI_MEMBER_CONFIG || {};
   const DEFAULT_MACRO_TARGETS = {

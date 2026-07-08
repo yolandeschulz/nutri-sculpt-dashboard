@@ -1,9 +1,9 @@
 window.NUTRI_MEMBER_CONFIG = {
-  enabled: false,
+  enabled: true,
   appName: "nutri-SCULPT Member App",
   priceLabel: "R99/month",
   supportEmail: "",
-  supabaseUrl: "",
-  supabaseAnonKey: "",
+  supabaseUrl: "https://bojfddaumbdggrtgynnm.supabase.co",
+  supabaseAnonKey: "sb_publishable_D-vfS-pQyyvSbC4gMq5qFQ_HY89o6EQ",
   paystackPaymentUrl: ""
 };
