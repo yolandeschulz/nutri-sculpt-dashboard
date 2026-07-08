@@ -1,13 +1,16 @@
-const CACHE_NAME = "nutri-sculpt-dashboard-v25";
+const CACHE_NAME = "nutri-sculpt-dashboard-v26";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./style.css",
-  "./app.js",
-  "./data.js",
-  "./manifest.json",
+  "./index.html?v=20260708-26",
+  "./style.css?v=20260708-26",
+  "./app.js?v=20260708-26",
+  "./data.js?v=20260708-26",
+  "./manifest.json?v=20260708-26",
   "./assets/icons/icon-192.png",
+  "./assets/icons/icon-192-maskable.png",
   "./assets/icons/icon-512.png",
+  "./assets/icons/icon-512-maskable.png",
   "./assets/icons/apple-touch-icon.png"
 ];
 
@@ -29,6 +32,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  if (!event.request.url.startsWith(self.location.origin)) return;
   event.respondWith(
     fetch(event.request).then((response) => {
       const copy = response.clone();

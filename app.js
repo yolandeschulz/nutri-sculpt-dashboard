@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260708-25";
+  const APP_VERSION = "20260708-26";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
@@ -59,6 +59,14 @@
     importState: document.querySelector("#importState"),
     pasteStateText: document.querySelector("#pasteStateText"),
     importStateFile: document.querySelector("#importStateFile"),
+    installApp: document.querySelector("#installApp"),
+    installStatus: document.querySelector("#installStatus"),
+    installSteps: document.querySelector("#installSteps"),
+    moveDataSteps: document.querySelector("#moveDataSteps"),
+    updateNotice: document.querySelector("#updateNotice"),
+    updateNoticeText: document.querySelector("#updateNoticeText"),
+    updateNow: document.querySelector("#updateNow"),
+    updateLater: document.querySelector("#updateLater"),
     shareImportPanel: document.querySelector("#shareImportPanel"),
     shareImportText: document.querySelector("#shareImportText"),
     importPastedState: document.querySelector("#importPastedState"),
@@ -192,12 +200,15 @@
   let editingCustomIngredientId = "";
   let editingCustomProductId = "";
   let editingCustomMealId = "";
+  let deferredInstallPrompt = null;
+  let availableAppVersion = "";
   updateRecipeIndexes();
 
   window.nutriSculptPickMeal = handlePlanSlotChange;
   initialiseControls();
   attachEvents();
   registerServiceWorker();
+  setupInstallAndUpdateHelpers();
   renderAll();
   showAppVersion();
 
@@ -629,6 +640,12 @@
 
     document.querySelector("#updateApp").addEventListener("click", () => {
       updateAppFiles();
+    });
+    elements.installApp?.addEventListener("click", installAppToPhone);
+    elements.updateNow?.addEventListener("click", () => updateAppFiles(availableAppVersion));
+    elements.updateLater?.addEventListener("click", () => {
+      if (elements.updateNotice) elements.updateNotice.hidden = true;
+      toast("Update hidden for now. You can still refresh from Settings.");
     });
     elements.exportState?.addEventListener("click", exportSavedDashboard);
     elements.copyStateText?.addEventListener("click", copySavedDashboardText);
@@ -3608,10 +3625,141 @@
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register(`./service-worker.js?v=${APP_VERSION}`).catch(() => {
+      navigator.serviceWorker.register(`./service-worker.js?v=${APP_VERSION}`).then((registration) => {
+        registration.addEventListener("updatefound", () => {
+          const worker = registration.installing;
+          if (!worker) return;
+          worker.addEventListener("statechange", () => {
+            if (worker.state === "installed" && navigator.serviceWorker.controller) {
+              showUpdateNotice(APP_VERSION);
+            }
+          });
+        });
+      }).catch(() => {
         // The dashboard still works if a browser blocks local service workers.
       });
     });
+  }
+
+  function setupInstallAndUpdateHelpers() {
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      if (elements.installStatus) {
+        elements.installStatus.textContent = "This phone can install the app. Tap Install app when you are ready.";
+      }
+      if (elements.installApp) elements.installApp.hidden = false;
+    });
+    window.addEventListener("appinstalled", () => {
+      deferredInstallPrompt = null;
+      if (elements.installStatus) {
+        elements.installStatus.textContent = "Installed. Open nutri-SCULPT from the phone home screen.";
+      }
+      toast("App added to this phone.");
+    });
+    renderPhoneHelp();
+    window.addEventListener("load", () => {
+      setTimeout(checkForNewAppVersion, 1600);
+    });
+  }
+
+  function renderPhoneHelp() {
+    const platform = phonePlatform();
+    const androidSteps = [
+      "Open this app link in Chrome.",
+      "Tap the three dots in the top right.",
+      "Tap Add to Home screen or Install app.",
+      "Open nutri-SCULPT from the home screen next time."
+    ];
+    const iosSteps = [
+      "Open this app link in Safari.",
+      "Tap the Share button.",
+      "Tap Add to Home Screen.",
+      "Tap Add, then open nutri-SCULPT from the home screen."
+    ];
+    const firstSteps = platform === "ios" ? iosSteps : androidSteps;
+    const secondTitle = platform === "ios" ? "Android/Samsung" : "iPhone";
+    const secondSteps = platform === "ios" ? androidSteps : iosSteps;
+    if (elements.installSteps) {
+      elements.installSteps.innerHTML = `
+        <div class="phone-help-card">
+          <strong>${platform === "ios" ? "iPhone" : "Android/Samsung"}</strong>
+          <ol>${firstSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+        </div>
+        <div class="phone-help-card">
+          <strong>${escapeHtml(secondTitle)}</strong>
+          <ol>${secondSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ol>
+        </div>
+      `;
+    }
+    if (elements.moveDataSteps) {
+      elements.moveDataSteps.innerHTML = `
+        <ol>
+          <li>On the old phone or old link, open Settings and tap Copy backup text.</li>
+          <li>Send that full text to the new phone, for example with WhatsApp.</li>
+          <li>On this phone, open this public app link, go to Settings, tap Restore from text, paste it, then tap Restore pasted data.</li>
+          <li>Tap Refresh app once. The meals, ticks, products and progress should appear on this phone.</li>
+        </ol>
+        <p>Saved data lives on each phone/browser. GitHub does not store your mom's private progress.</p>
+      `;
+    }
+    if (elements.installStatus) {
+      elements.installStatus.textContent = standaloneDisplay()
+        ? "This app is already opening like a phone app."
+        : "Add this app to the home screen so it opens like a normal app.";
+    }
+    if (elements.installApp && platform === "ios") {
+      elements.installApp.hidden = true;
+    }
+  }
+
+  function phonePlatform() {
+    const agent = navigator.userAgent || "";
+    const isiPad = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    if (/iPhone|iPad|iPod/i.test(agent) || isiPad) return "ios";
+    if (/Android/i.test(agent)) return "android";
+    return "desktop";
+  }
+
+  function standaloneDisplay() {
+    return window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone === true;
+  }
+
+  async function installAppToPhone() {
+    if (!deferredInstallPrompt) {
+      toast(phonePlatform() === "ios" ? "On iPhone, use Safari Share, then Add to Home Screen." : "Use your browser menu, then Add to Home screen or Install app.");
+      return;
+    }
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice.catch(() => null);
+    deferredInstallPrompt = null;
+    if (choice?.outcome === "accepted") {
+      toast("Install started.");
+    } else {
+      toast("Install cancelled. The instructions stay here when you are ready.");
+    }
+  }
+
+  async function checkForNewAppVersion() {
+    try {
+      const response = await fetch(`./app.js?version-check=${Date.now()}`, { cache: "no-store" });
+      const text = await response.text();
+      const match = text.match(/APP_VERSION\s*=\s*"([^"]+)"/);
+      const latestVersion = match?.[1] || "";
+      if (latestVersion && latestVersion !== APP_VERSION) {
+        showUpdateNotice(latestVersion);
+      }
+    } catch {
+      // The app can still work offline; update checks wait until a connection is available.
+    }
+  }
+
+  function showUpdateNotice(version) {
+    availableAppVersion = version || APP_VERSION;
+    if (elements.updateNoticeText) {
+      elements.updateNoticeText.textContent = `A new nutri-SCULPT version is available. Updating keeps your saved meals and ticks on this phone.`;
+    }
+    if (elements.updateNotice) elements.updateNotice.hidden = false;
   }
 
   function exportSavedDashboard() {
@@ -3727,7 +3875,7 @@
     return JSON.parse(jsonText);
   }
 
-  async function updateAppFiles() {
+  async function updateAppFiles(version = APP_VERSION) {
     try {
       if ("serviceWorker" in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
@@ -3739,7 +3887,7 @@
       }
     } finally {
       const base = window.location.pathname || "./index.html";
-      window.location.href = `${base}?v=${APP_VERSION}-${Date.now()}`;
+      window.location.href = `${base}?v=${version || APP_VERSION}-${Date.now()}`;
     }
   }
 

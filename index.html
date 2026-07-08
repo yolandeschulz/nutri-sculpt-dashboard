@@ -7,11 +7,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="format-detection" content="telephone=no">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260708-25">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260708-25" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260708-25">
-  <link rel="stylesheet" href="style.css?v=20260708-25">
+  <link rel="manifest" href="manifest.json?v=20260708-26">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260708-26" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260708-26">
+  <link rel="stylesheet" href="style.css?v=20260708-26">
 </head>
 <body>
   <header class="app-header">
@@ -27,6 +28,17 @@
   </header>
 
   <main>
+    <section id="updateNotice" class="update-notice" hidden>
+      <div>
+        <strong>New version available</strong>
+        <p id="updateNoticeText">A new nutri-SCULPT version is available.</p>
+      </div>
+      <div class="inline-controls">
+        <button id="updateNow" class="primary-button" type="button">Update now</button>
+        <button id="updateLater" class="ghost-button" type="button">Later</button>
+      </div>
+    </section>
+
     <section class="stats-strip" aria-label="Challenge summary">
       <article class="stat-card accent-teal">
         <span class="stat-label">PDF + custom foods</span>
@@ -435,13 +447,27 @@
         </div>
       </div>
       <section class="settings-panel">
+        <h3>Add to phone</h3>
+        <div class="info-band compact-info" id="installStatus">Add this app to the home screen so it opens like a normal app.</div>
+        <div id="installSteps" class="phone-help-grid"></div>
+        <div class="settings-actions">
+          <button id="installApp" class="primary-button" type="button">Install app</button>
+          <button id="updateApp" class="ghost-button" type="button">Refresh app</button>
+        </div>
+
+        <h3>Move my data to this phone</h3>
+        <div class="phone-help-card move-data-card">
+          <div id="moveDataSteps"></div>
+          <div class="settings-actions">
+            <button id="copyStateText" class="primary-button" type="button">Copy backup text</button>
+            <button id="pasteStateText" class="ghost-button" type="button">Restore from text</button>
+          </div>
+        </div>
+
         <h3>Backup and restore</h3>
         <div class="settings-actions">
-          <button id="updateApp" class="ghost-button" type="button">Refresh app</button>
           <button id="exportState" class="ghost-button" type="button">Back up my dashboard</button>
-          <button id="copyStateText" class="ghost-button" type="button">Copy backup text</button>
           <button id="importState" class="ghost-button" type="button">Restore from file</button>
-          <button id="pasteStateText" class="ghost-button" type="button">Restore from text</button>
           <input id="importStateFile" type="file" accept="application/json,.json" hidden>
           <button id="resetDemo" class="ghost-button danger-button" type="button">Clear saved progress</button>
         </div>
@@ -462,7 +488,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260708-25"></script>
-  <script src="app.js?v=20260708-25"></script>
+  <script src="data.js?v=20260708-26"></script>
+  <script src="app.js?v=20260708-26"></script>
 </body>
 </html>
