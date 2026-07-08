@@ -42,3 +42,7 @@ Paid access MVP:
 - `member-config.js` controls whether member login is enabled.
 - `supabase-setup.sql` creates the Supabase member access table.
 - Do not add Supabase service-role keys or Paystack secret keys to this static app.
+
+Owner demo:
+
+- See `OWNER_DEMO_PACK.md` for the copy-paste owner message, testing checklist, feedback questions, and commercial rollout notes.
