@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-title" content="nutri-SCULPT">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260708-24">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260708-24" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260708-24">
-  <link rel="stylesheet" href="style.css?v=20260708-24">
+  <link rel="manifest" href="manifest.json?v=20260708-25">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260708-25" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260708-25">
+  <link rel="stylesheet" href="style.css?v=20260708-25">
 </head>
 <body>
   <header class="app-header">
@@ -37,7 +37,7 @@
         <strong id="statShopping">0</strong>
       </article>
       <article class="stat-card accent-gold">
-        <span class="stat-label">Daily rules ticked</span>
+        <span class="stat-label">Today's rules ticked</span>
         <strong id="statRules">0%</strong>
       </article>
       <article class="stat-card accent-green">
@@ -68,6 +68,7 @@
           <p class="eyebrow">Daily control panel</p>
           <h2 id="todayHeading">Today</h2>
           <p class="section-helper">Start here. Follow today's meals, tick your habits, and complete your workout if it is scheduled.</p>
+          <p class="save-note">Saved automatically on this device.</p>
         </div>
         <div class="inline-controls">
           <select id="todayDay" class="field"></select>
@@ -338,9 +339,13 @@
         </div>
         <div class="inline-controls">
           <button class="ghost-button" id="copyShopping" type="button">Copy list</button>
+          <button class="primary-button" id="startShoppingTrip" type="button">Start shopping trip</button>
+          <button class="ghost-button" id="toggleBoughtItems" type="button" hidden>Hide bought items</button>
+          <button class="ghost-button" id="exitShoppingTrip" type="button" hidden>Exit shopping mode</button>
           <button class="primary-button" id="printShopping" type="button">Print shopping list</button>
         </div>
       </div>
+      <div id="shoppingModeIntro" class="info-band">First mark what you already have, what you need to buy, what is optional, and what you want to skip.</div>
       <div class="shopping-tools">
         <label class="toggle-row">
           <input id="showAllShopping" type="checkbox">
@@ -457,7 +462,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260708-24"></script>
-  <script src="app.js?v=20260708-24"></script>
+  <script src="data.js?v=20260708-25"></script>
+  <script src="app.js?v=20260708-25"></script>
 </body>
 </html>

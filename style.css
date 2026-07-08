@@ -293,10 +293,16 @@ h3 {
 }
 
 .today-layout,
-.progress-layout,
-.rules-layout {
+.progress-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 18px;
+}
+
+.rules-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  align-items: start;
   gap: 18px;
 }
 
@@ -430,12 +436,14 @@ h3 {
 .week-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(170px, 1fr));
+  align-items: start;
   gap: 12px;
 }
 
 .day-card {
   display: grid;
   gap: 10px;
+  align-content: start;
   min-width: 0;
   padding: 14px;
   border-radius: var(--radius);
@@ -468,6 +476,15 @@ h3 {
   font-weight: 800;
 }
 
+.slot-helper,
+.save-note,
+.daily-check-progress {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
 .meal-slot select {
   width: 100%;
   min-width: 0;
@@ -477,7 +494,6 @@ h3 {
   display: grid;
   gap: 7px;
   min-width: 0;
-  min-height: 62px;
   padding: 10px;
   border: 1px dashed var(--line);
   border-radius: 6px;
@@ -496,6 +512,11 @@ h3 {
 .selected-meal-preview strong {
   color: var(--deep);
   overflow-wrap: anywhere;
+}
+
+.flexible-day-note {
+  margin: -2px 0 2px;
+  line-height: 1.35;
 }
 
 .serving-override {
@@ -1044,6 +1065,59 @@ h3 {
   background: var(--pale);
 }
 
+.shopping-trip-category {
+  display: grid;
+  gap: 10px;
+}
+
+.shopping-trip-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 58px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  cursor: pointer;
+}
+
+.shopping-trip-item input {
+  width: 24px;
+  height: 24px;
+  accent-color: var(--teal);
+}
+
+.shopping-trip-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.shopping-trip-copy span,
+.shopping-trip-copy small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.shopping-trip-item.is-bought {
+  background: var(--pale);
+  color: var(--muted);
+}
+
+.shopping-trip-item.is-bought .shopping-trip-copy {
+  text-decoration: line-through;
+}
+
+.shopping-trip-empty {
+  padding: 14px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--pale);
+}
+
 .item-title {
   font-weight: 800;
 }
@@ -1386,21 +1460,44 @@ h3 {
 }
 
 .learn-card {
+  display: block;
+  grid-template-columns: none;
   padding: 0;
   overflow: hidden;
+  background: var(--white);
+}
+
+.learn-card::before {
+  content: none;
 }
 
 .learn-card summary {
-  padding: 14px;
+  display: block;
+  padding: 16px;
   color: var(--deep);
   font-weight: 850;
   cursor: pointer;
+  line-height: 1.35;
+}
+
+.learn-card summary::-webkit-details-marker {
+  display: none;
 }
 
 .learn-card ul {
   margin: 0;
   padding: 0 18px 16px 34px;
   color: var(--muted);
+  max-width: none;
+  line-height: 1.45;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.learn-card li {
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .learn-card li + li {

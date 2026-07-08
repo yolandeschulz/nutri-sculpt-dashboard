@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260708-24";
+  const APP_VERSION = "20260708-25";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
@@ -80,6 +80,10 @@
     mealCards: document.querySelector("#mealCards"),
     showAllShopping: document.querySelector("#showAllShopping"),
     shoppingRange: document.querySelector("#shoppingRange"),
+    startShoppingTrip: document.querySelector("#startShoppingTrip"),
+    exitShoppingTrip: document.querySelector("#exitShoppingTrip"),
+    toggleBoughtItems: document.querySelector("#toggleBoughtItems"),
+    shoppingModeIntro: document.querySelector("#shoppingModeIntro"),
     shoppingList: document.querySelector("#shoppingList"),
     workoutPhase: document.querySelector("#workoutPhase"),
     workoutSummary: document.querySelector("#workoutSummary"),
@@ -310,6 +314,9 @@
       sortMeals: "pdf",
       showAllShopping: false,
       shoppingRange: "next3",
+      shoppingMode: false,
+      showBought: true,
+      shoppingBought: {},
       workoutPhase: "Week 1-2",
       macroTargets: { ...DEFAULT_MACRO_TARGETS },
       plan,
@@ -365,6 +372,7 @@
       ...saved,
       plan: { ...base.plan, ...(saved.plan || {}) },
       ingredients: { ...base.ingredients, ...(saved.ingredients || {}) },
+      shoppingBought: { ...base.shoppingBought, ...(saved.shoppingBought || {}) },
       daily: { ...base.daily, ...(saved.daily || {}) },
       notes: { ...base.notes, ...(saved.notes || {}) },
       workouts: { ...base.workouts, ...(saved.workouts || {}) },
@@ -385,6 +393,7 @@
       merged.workoutPhase = phaseForWeek(Number(merged.activeWeek) || 1);
     }
     cleanupBrokenPlanSlots(merged.plan);
+    ensureFullPlanHistory(merged.plan);
     return merged;
   }
 
@@ -396,6 +405,20 @@
         }
       });
     });
+  }
+
+  function ensureFullPlanHistory(plan) {
+    for (let week = 1; week <= 8; week += 1) {
+      plan[week] = plan[week] || {};
+      for (const day of DAYS) {
+        plan[week][day] = plan[week][day] || {};
+        for (const slot of SLOTS) {
+          if (!Object.prototype.hasOwnProperty.call(plan[week][day], slot.key)) {
+            plan[week][day][slot.key] = "";
+          }
+        }
+      }
+    }
   }
 
   function saveState() {
@@ -540,6 +563,23 @@
       saveAndRender(["shopping"]);
     });
 
+    elements.startShoppingTrip?.addEventListener("click", () => {
+      state.shoppingMode = true;
+      saveAndRender(["shopping"]);
+      toast("Shopping trip started.");
+    });
+
+    elements.exitShoppingTrip?.addEventListener("click", () => {
+      state.shoppingMode = false;
+      saveAndRender(["shopping"]);
+      toast("Back to planning view.");
+    });
+
+    elements.toggleBoughtItems?.addEventListener("click", () => {
+      state.showBought = !state.showBought;
+      saveAndRender(["shopping"]);
+    });
+
     elements.workoutPhase.addEventListener("change", () => {
       state.workoutPhase = elements.workoutPhase.value;
       saveAndRender(["workouts", "stats"]);
@@ -669,7 +709,13 @@
 
       if (target.matches("[data-ingredient-status]")) {
         state.ingredients[target.dataset.ingredientStatus] = target.value;
+        delete state.shoppingBought?.[target.dataset.ingredientStatus];
         saveAndRender(["shopping", "meals", "stats"]);
+      }
+
+      if (target.matches("[data-shopping-bought]")) {
+        state.shoppingBought[target.dataset.shoppingBought] = target.checked;
+        saveAndRender(["shopping"]);
       }
 
       if (target.matches("[data-daily-check]")) {
@@ -707,8 +753,25 @@
       }
     });
 
+    document.addEventListener("keydown", (event) => {
+      const row = event.target.closest?.("[data-shopping-bought-row]");
+      if (!row || !["Enter", " "].includes(event.key)) return;
+      event.preventDefault();
+      const item = row.dataset.shoppingBoughtRow;
+      state.shoppingBought[item] = !shoppingBought(item);
+      saveAndRender(["shopping"]);
+    });
+
     document.addEventListener("click", (event) => {
       const target = event.target;
+      const shoppingBoughtRow = target.closest?.("[data-shopping-bought-row]");
+      if (shoppingBoughtRow && !target.matches("[data-shopping-bought]")) {
+        const item = shoppingBoughtRow.dataset.shoppingBoughtRow;
+        state.shoppingBought[item] = !shoppingBought(item);
+        saveAndRender(["shopping"]);
+        return;
+      }
+
       if (target.matches("[data-remove-draft-ingredient]")) {
         removeDraftIngredient(target.dataset.removeDraftIngredient);
       }
@@ -772,6 +835,8 @@
     saveAndRender(["today", "week", "shopping", "meals", "stats"]);
     if (recipe && changed) {
       toast(`${recipe.name} added to ${day}. Shopping list updated.`);
+    } else if (changed && !target.value) {
+      toast(`${slotLabel(slot)} cleared for ${day}. Shopping list updated.`);
     }
   }
 
@@ -840,12 +905,14 @@
     }
 
     const currentChecks = state.daily[dailyKey(state.activeWeek, day)] || {};
-    elements.dailyChecks.innerHTML = DAILY_CHECKS.map((check) => `
+    const visibleChecks = visibleDailyChecks(day);
+    const progress = dailyCheckProgress(state.activeWeek, day);
+    elements.dailyChecks.innerHTML = `${visibleChecks.map((check) => `
       <label class="check-item">
         <input type="checkbox" data-daily-check="${check.key}" ${currentChecks[check.key] ? "checked" : ""}>
         <span>${escapeHtml(check.label)}</span>
       </label>
-    `).join("");
+    `).join("")}<div class="daily-check-progress">${progress.ticked} of ${progress.total} completed today</div>`;
   }
 
   function renderWeek() {
@@ -861,7 +928,7 @@
       return `
         <article class="day-card ${isSunday ? "flexible-day" : ""}">
           <h3>${escapeHtml(isSunday ? "Sunday - Flexible day" : day)}</h3>
-          ${isSunday ? `<p class="item-meta">Tracking is optional. Use leftovers, repeat a favourite, or add your own meal.</p>` : ""}
+          ${isSunday ? `<p class="item-meta flexible-day-note">Tracking is optional. Use leftovers, repeat a favourite, or add your own meal.</p>` : ""}
           ${SLOTS.map((slot) => mealSelectHtml(day, slot, dayPlan[slot.key])).join("")}
           ${isSunday && !meals.length
             ? `<div class="day-macros flexible-note">Flexible day - blank is okay.</div>`
@@ -881,9 +948,10 @@
       <div class="meal-slot">
         <label>${escapeHtml(slot.label)}</label>
         <select class="field" data-plan-slot="${slot.key}" data-day="${escapeHtml(day)}" onchange="window.nutriSculptPickMeal(this)" oninput="window.nutriSculptPickMeal(this)">
-          <option value="">Choose</option>
+          <option value="">No meal selected</option>
           ${options}
         </select>
+        <span class="slot-helper">You can change or clear a meal at any time.</span>
         ${selectedRecipe ? selectedMealPreviewHtml(selectedRecipe, day, slot) : emptyMealPreviewHtml(slot)}
       </div>
     `;
@@ -931,7 +999,7 @@
       return count + SLOTS.filter((slot) => state.plan[state.activeWeek][day]?.[slot.key]).length;
     }, 0);
     const workoutCount = completedWorkoutDaysForWeek();
-    const habitPercent = weeklyDailyPercent();
+    const habitPercent = dailyRulesPercent(state.activeWeek, state.todayDay);
     return `
       <article class="mini-summary">
         <span class="stat-label">Meals planned</span>
@@ -942,7 +1010,7 @@
         <strong>${workoutCount}/3</strong>
       </article>
       <article class="mini-summary">
-        <span class="stat-label">Daily habits</span>
+        <span class="stat-label">Today's habits</span>
         <strong>${habitPercent}%</strong>
       </article>
     `;
@@ -1015,6 +1083,7 @@
   function renderShopping() {
     const scope = state.showAllShopping ? "all" : (state.shoppingRange || "next3");
     const items = aggregateShopping(scope);
+    syncShoppingModeControls();
     if (!items.length) {
       elements.shoppingList.innerHTML = `
         <section class="shopping-category">
@@ -1028,15 +1097,45 @@
       return;
     }
 
+    if (state.shoppingMode) {
+      elements.shoppingList.innerHTML = shoppingTripHtml(items);
+      return;
+    }
+
     const grouped = groupBy(items, "category");
-    elements.shoppingList.innerHTML = CATEGORY_ORDER
-      .filter((category) => grouped[category])
+    elements.shoppingList.innerHTML = orderedShoppingCategories(grouped)
       .map((category) => `
         <section class="shopping-category">
           <h3>${escapeHtml(category)} (${grouped[category].length})</h3>
           ${grouped[category].map((item) => shoppingItemHtml(item)).join("")}
         </section>
       `).join("");
+  }
+
+  function syncShoppingModeControls() {
+    if (elements.shoppingModeIntro) {
+      elements.shoppingModeIntro.textContent = state.shoppingMode
+        ? "Only your Need to buy and Optional items are shown here. Tick items off as you shop."
+        : "First mark what you already have, what you need to buy, what is optional, and what you want to skip.";
+    }
+    if (elements.startShoppingTrip) {
+      elements.startShoppingTrip.hidden = Boolean(state.shoppingMode);
+    }
+    if (elements.exitShoppingTrip) {
+      elements.exitShoppingTrip.hidden = !state.shoppingMode;
+    }
+    if (elements.toggleBoughtItems) {
+      elements.toggleBoughtItems.hidden = !state.shoppingMode;
+      elements.toggleBoughtItems.textContent = state.showBought ? "Hide bought items" : "Show bought items";
+    }
+  }
+
+  function orderedShoppingCategories(grouped) {
+    const known = CATEGORY_ORDER.filter((category) => grouped[category]);
+    const extra = Object.keys(grouped)
+      .filter((category) => !CATEGORY_ORDER.includes(category))
+      .sort((a, b) => a.localeCompare(b));
+    return [...known, ...extra];
   }
 
   function shoppingItemHtml(item) {
@@ -1052,6 +1151,49 @@
         <span class="pill ${statusClass(status)}">${escapeHtml(status)}</span>
       </div>
     `;
+  }
+
+  function shoppingTripHtml(items) {
+    const tripItems = items.filter((item) => ["Need to buy", "Optional"].includes(ingredientStatus(item.item)));
+    const toBuy = tripItems.filter((item) => !shoppingBought(item.item));
+    const bought = tripItems.filter((item) => shoppingBought(item.item));
+    if (!toBuy.length && (!state.showBought || !bought.length)) {
+      return `
+        <section class="shopping-category">
+          <h3>No shopping trip items</h3>
+          <div class="shopping-trip-empty">No Need to buy or Optional items are showing in this shopping scope.</div>
+        </section>
+      `;
+    }
+    const toBuyGrouped = groupBy(toBuy, "category");
+    const boughtHtml = state.showBought && bought.length
+      ? `<section class="shopping-category bought-section"><h3>Bought (${bought.length})</h3>${bought.map((item) => shoppingTripItemHtml(item, true)).join("")}</section>`
+      : "";
+    return `${orderedShoppingCategories(toBuyGrouped).map((category) => `
+      <section class="shopping-category shopping-trip-category">
+        <h3>${escapeHtml(category)} (${toBuyGrouped[category].length})</h3>
+        ${toBuyGrouped[category].map((item) => shoppingTripItemHtml(item, false)).join("")}
+      </section>
+    `).join("")}${boughtHtml}`;
+  }
+
+  function shoppingTripItemHtml(item, bought) {
+    const status = ingredientStatus(item.item);
+    return `
+      <div class="shopping-trip-item ${bought ? "is-bought" : ""}" data-shopping-bought-row="${escapeHtml(item.item)}" role="checkbox" aria-checked="${bought ? "true" : "false"}" tabindex="0">
+        <input type="checkbox" data-shopping-bought="${escapeHtml(item.item)}" ${bought ? "checked" : ""}>
+        <span class="shopping-trip-copy">
+          <strong>${escapeHtml(item.item)}</strong>
+          <span>${escapeHtml(item.amounts.join("; "))}</span>
+          <small>Used in: ${escapeHtml(item.usedIn.join("; "))}</small>
+        </span>
+        <span class="pill ${statusClass(status)}">${escapeHtml(status)}</span>
+      </div>
+    `;
+  }
+
+  function shoppingBought(item) {
+    return Boolean(state.shoppingBought?.[item]);
   }
 
   function statusSelectHtml(item, status) {
@@ -1085,7 +1227,7 @@
         <summary>
           <span>${escapeHtml(workout.exercise)}</span>
           <label class="toggle-row" onclick="event.stopPropagation()">
-            <input type="checkbox" data-workout-check="${escapeHtml(key)}" ${state.workouts[key] ? "checked" : ""}>
+            <input type="checkbox" data-workout-check="${escapeHtml(key)}" ${workoutDone(workout) ? "checked" : ""}>
             <span>Done</span>
           </label>
         </summary>
@@ -2767,7 +2909,7 @@
   function renderStats() {
     const selectedShopping = aggregateShopping("selected");
     const needCount = selectedShopping.filter((item) => ingredientStatus(item.item) === "Need to buy").length;
-    const dailyPercent = weeklyDailyPercent();
+    const dailyPercent = dailyRulesPercent(state.activeWeek, state.todayDay);
     const workoutCount = completedWorkoutDaysForWeek();
     const todayTotals = sumMacros(selectedMealsForDay(state.todayDay));
     const targets = currentMacroTargets();
@@ -2984,7 +3126,7 @@
     if (!workouts.length) {
       return `<div class="gentle-card"><strong>No workout found for today</strong><p>Check the Workouts tab for this week's plan.</p></div>`;
     }
-    const allDone = workouts.every((workout) => state.workouts[workoutKey(workout)]);
+    const allDone = workouts.every((workout) => workoutDone(workout));
     return `
       <div class="gentle-card ${allDone ? "done-card" : ""}">
         <strong>${escapeHtml(day)}: ${escapeHtml(workouts[0].focus)}</strong>
@@ -3090,6 +3232,10 @@
     return "Plan meal";
   }
 
+  function slotLabel(slotKey) {
+    return SLOTS.find((slot) => slot.key === slotKey)?.label || "Meal";
+  }
+
   function mealScore(recipe) {
     const ingredients = recipe.ingredients || [];
     const total = ingredients.length || 0;
@@ -3178,12 +3324,28 @@
     return possible ? Math.round((ticked / possible) * 100) : 0;
   }
 
+  function visibleDailyChecks(day) {
+    return DAILY_CHECKS.filter((check) => check && check.key && check.label);
+  }
+
+  function dailyCheckProgress(week, day) {
+    const checks = visibleDailyChecks(day);
+    const current = state.daily[dailyKey(week, day)] || {};
+    const ticked = checks.filter((check) => current[check.key]).length;
+    return { ticked, total: checks.length };
+  }
+
+  function dailyRulesPercent(week, day) {
+    const progress = dailyCheckProgress(week, day);
+    return progress.total ? Math.round((progress.ticked / progress.total) * 100) : 0;
+  }
+
   function completedWorkoutDaysForWeek() {
     const phase = phaseForWeek(state.activeWeek);
     const days = ["Monday", "Wednesday", "Friday"];
     return days.filter((day) => {
       const workouts = DATA.workouts.filter((workout) => workout.phase === phase && workout.day === day);
-      return workouts.length && workouts.every((workout) => state.workouts[workoutKey(workout)]);
+      return workouts.length && workouts.every((workout) => workoutDone(workout));
     }).length;
   }
 
@@ -3201,8 +3363,20 @@
     return dailyKey(state.activeWeek, state.todayDay);
   }
 
-  function workoutKey(workout) {
+  function workoutKey(workout, week = state.activeWeek) {
+    return `${week}|${workout.phase}|${workout.day}|${workout.exercise}`;
+  }
+
+  function legacyWorkoutKey(workout) {
     return `${workout.phase}|${workout.day}|${workout.exercise}`;
+  }
+
+  function workoutDone(workout) {
+    const currentKey = workoutKey(workout);
+    if (Object.prototype.hasOwnProperty.call(state.workouts, currentKey)) {
+      return Boolean(state.workouts[currentKey]);
+    }
+    return Boolean(state.workouts[legacyWorkoutKey(workout)]);
   }
 
   function ensurePlanDay(week, day) {
