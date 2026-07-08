@@ -37,6 +37,11 @@ body.mobile-nav-open {
   overflow: hidden;
 }
 
+body.member-locked .app-header,
+body.member-locked main {
+  display: none;
+}
+
 button,
 input,
 select,
@@ -62,6 +67,76 @@ button {
   margin: 4px 0 8px;
   font-size: clamp(28px, 4vw, 46px);
   line-height: 1.05;
+}
+
+.member-gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(135deg, rgba(223, 245, 238, 0.95), rgba(255, 250, 240, 0.98) 48%, rgba(255, 227, 217, 0.75)),
+    var(--paper);
+}
+
+.member-gate[hidden] {
+  display: none;
+}
+
+.member-card {
+  width: min(620px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: clamp(18px, 4vw, 30px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.member-card h1 {
+  margin: 0;
+  color: var(--deep);
+  font-size: clamp(30px, 6vw, 46px);
+  line-height: 1.05;
+}
+
+.member-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.member-auth-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.member-auth-panel[hidden] {
+  display: none;
+}
+
+.member-auth-panel label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.member-locked-panel {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid rgba(244, 201, 93, 0.75);
+  border-radius: var(--radius);
+  background: var(--gold-soft);
+}
+
+.member-locked-panel[hidden] {
+  display: none;
+}
+
+.member-locked-panel strong {
+  color: var(--deep);
 }
 
 .subhead {
@@ -132,6 +207,29 @@ button {
   color: rgba(255, 255, 255, 0.9);
   font-size: 12px;
   font-weight: 800;
+}
+
+.member-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  max-width: 270px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-signout {
+  min-height: 34px;
+  border-color: rgba(255, 255, 255, 0.55);
+  color: var(--white);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 main {

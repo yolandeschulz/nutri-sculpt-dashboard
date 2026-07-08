@@ -9,12 +9,38 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="format-detection" content="telephone=no">
   <title>nutri-SCULPT 8 Week Dashboard</title>
-  <link rel="manifest" href="manifest.json?v=20260708-26">
-  <link rel="icon" href="assets/icons/favicon.ico?v=20260708-26" sizes="any">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260708-26">
-  <link rel="stylesheet" href="style.css?v=20260708-26">
+  <link rel="manifest" href="manifest.json?v=20260708-27">
+  <link rel="icon" href="assets/icons/favicon.ico?v=20260708-27" sizes="any">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260708-27">
+  <link rel="stylesheet" href="style.css?v=20260708-27">
 </head>
 <body>
+  <section id="memberGate" class="member-gate" hidden>
+    <div class="member-card">
+      <p class="eyebrow">nutri-SCULPT Member App</p>
+      <h1>Member access</h1>
+      <p id="memberGateText">Sign in to use the member dashboard. Only active paid users can access the full tracker.</p>
+      <div id="memberAuthPanel" class="member-auth-panel">
+        <label>Email<input id="memberEmail" class="field" type="email" autocomplete="email" placeholder="you@example.com"></label>
+        <label>Password<input id="memberPassword" class="field" type="password" autocomplete="current-password" placeholder="Your password"></label>
+        <div class="inline-controls">
+          <button id="memberSignIn" class="primary-button" type="button">Sign in</button>
+          <button id="memberSignUp" class="ghost-button" type="button">Create account</button>
+        </div>
+      </div>
+      <div id="memberLockedPanel" class="member-locked-panel" hidden>
+        <strong id="memberLockedTitle">Subscription needed</strong>
+        <p id="memberLockedText">This account is not active yet. Subscribe, then tap Check access.</p>
+      </div>
+      <div class="inline-controls">
+        <button id="memberSubscribe" class="primary-button" type="button">Subscribe R99/month</button>
+        <button id="memberCheckAccess" class="ghost-button" type="button">Check access</button>
+        <button id="memberSignOut" class="ghost-button" type="button" hidden>Sign out</button>
+      </div>
+      <div id="memberAccessStatus" class="label-status">Member access is being checked.</div>
+    </div>
+  </section>
+
   <header class="app-header">
     <div>
       <p class="eyebrow">Daily challenge companion</p>
@@ -24,6 +50,8 @@
     <div class="header-actions">
       <label class="select-label" for="activeWeek">Week</label>
       <select id="activeWeek" class="field compact"></select>
+      <span id="memberBadge" class="member-badge" hidden></span>
+      <button id="headerMemberSignOut" class="ghost-button header-signout" type="button" hidden>Sign out</button>
     </div>
   </header>
 
@@ -488,7 +516,9 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="data.js?v=20260708-26"></script>
-  <script src="app.js?v=20260708-26"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="member-config.js?v=20260708-27"></script>
+  <script src="data.js?v=20260708-27"></script>
+  <script src="app.js?v=20260708-27"></script>
 </body>
 </html>

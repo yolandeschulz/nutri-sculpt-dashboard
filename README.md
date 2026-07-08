@@ -19,6 +19,7 @@ What it does:
 - Works on desktop, Android, and iPhone screens, with phone-friendly bottom tabs and larger tap areas.
 - Includes Add to phone instructions for Android/Samsung and iPhone.
 - Checks for newer app versions and keeps Refresh app as a manual fallback.
+- Includes a disabled-by-default member access gate for the `nutri-SCULPT Member App` subscription MVP.
 - Saves progress locally in the browser.
 
 Notes:
@@ -34,3 +35,10 @@ Phone install:
 - iPhone: open the GitHub Pages link in Safari, tap Share, then tap Add to Home Screen.
 - To move saved data to a new phone, use Settings -> Copy backup text on the old phone and Settings -> Restore from text on the new phone.
 - The icon files are in `assets/icons/`.
+
+Paid access MVP:
+
+- See `MEMBER_APP_SETUP.md`.
+- `member-config.js` controls whether member login is enabled.
+- `supabase-setup.sql` creates the Supabase member access table.
+- Do not add Supabase service-role keys or Paystack secret keys to this static app.

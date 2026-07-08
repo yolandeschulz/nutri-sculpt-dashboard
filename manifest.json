@@ -3,7 +3,7 @@
   "short_name": "nutri-SCULPT",
   "description": "Interactive 8-week nutri-SCULPT tracker with meals, shopping list, workouts, and progress.",
   "id": "./",
-  "start_url": "./index.html?v=20260708-26",
+  "start_url": "./index.html?v=20260708-27",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

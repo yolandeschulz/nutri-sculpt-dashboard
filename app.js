@@ -1,7 +1,8 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260708-26";
+  const APP_VERSION = "20260708-27";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
+  const MEMBER_CONFIG = window.NUTRI_MEMBER_CONFIG || {};
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
     protein: 100,
@@ -67,6 +68,22 @@
     updateNoticeText: document.querySelector("#updateNoticeText"),
     updateNow: document.querySelector("#updateNow"),
     updateLater: document.querySelector("#updateLater"),
+    memberGate: document.querySelector("#memberGate"),
+    memberGateText: document.querySelector("#memberGateText"),
+    memberAuthPanel: document.querySelector("#memberAuthPanel"),
+    memberLockedPanel: document.querySelector("#memberLockedPanel"),
+    memberLockedTitle: document.querySelector("#memberLockedTitle"),
+    memberLockedText: document.querySelector("#memberLockedText"),
+    memberEmail: document.querySelector("#memberEmail"),
+    memberPassword: document.querySelector("#memberPassword"),
+    memberSignIn: document.querySelector("#memberSignIn"),
+    memberSignUp: document.querySelector("#memberSignUp"),
+    memberSubscribe: document.querySelector("#memberSubscribe"),
+    memberCheckAccess: document.querySelector("#memberCheckAccess"),
+    memberSignOut: document.querySelector("#memberSignOut"),
+    headerMemberSignOut: document.querySelector("#headerMemberSignOut"),
+    memberAccessStatus: document.querySelector("#memberAccessStatus"),
+    memberBadge: document.querySelector("#memberBadge"),
     shareImportPanel: document.querySelector("#shareImportPanel"),
     shareImportText: document.querySelector("#shareImportText"),
     importPastedState: document.querySelector("#importPastedState"),
@@ -202,6 +219,8 @@
   let editingCustomMealId = "";
   let deferredInstallPrompt = null;
   let availableAppVersion = "";
+  let memberClient = null;
+  let currentMemberUser = null;
   updateRecipeIndexes();
 
   window.nutriSculptPickMeal = handlePlanSlotChange;
@@ -209,6 +228,7 @@
   attachEvents();
   registerServiceWorker();
   setupInstallAndUpdateHelpers();
+  setupMemberAccess();
   renderAll();
   showAppVersion();
 
@@ -647,6 +667,12 @@
       if (elements.updateNotice) elements.updateNotice.hidden = true;
       toast("Update hidden for now. You can still refresh from Settings.");
     });
+    elements.memberSignIn?.addEventListener("click", signInMember);
+    elements.memberSignUp?.addEventListener("click", signUpMember);
+    elements.memberSubscribe?.addEventListener("click", startMemberSubscription);
+    elements.memberCheckAccess?.addEventListener("click", () => checkMemberAccess(currentMemberUser));
+    elements.memberSignOut?.addEventListener("click", signOutMember);
+    elements.headerMemberSignOut?.addEventListener("click", signOutMember);
     elements.exportState?.addEventListener("click", exportSavedDashboard);
     elements.copyStateText?.addEventListener("click", copySavedDashboardText);
     elements.importState?.addEventListener("click", () => elements.importStateFile?.click());
@@ -3620,6 +3646,184 @@
     elements.toast.textContent = message;
     elements.toast.classList.add("show");
     setTimeout(() => elements.toast.classList.remove("show"), 2200);
+  }
+
+  function memberModeEnabled() {
+    return Boolean(
+      MEMBER_CONFIG.enabled &&
+      MEMBER_CONFIG.supabaseUrl &&
+      MEMBER_CONFIG.supabaseAnonKey
+    );
+  }
+
+  async function setupMemberAccess() {
+    renderMemberGateCopy();
+    if (!memberModeEnabled()) {
+      document.body.classList.remove("member-locked");
+      elements.memberGate.hidden = true;
+      elements.memberBadge.hidden = true;
+      elements.headerMemberSignOut.hidden = true;
+      return;
+    }
+    if (!window.supabase?.createClient) {
+      lockMemberScreen("Member login could not load. Check the internet connection and refresh the app.", { showAuth: false });
+      return;
+    }
+    memberClient = window.supabase.createClient(MEMBER_CONFIG.supabaseUrl, MEMBER_CONFIG.supabaseAnonKey);
+    lockMemberScreen("Checking member access...", { showAuth: false });
+    const { data } = await memberClient.auth.getSession();
+    currentMemberUser = data?.session?.user || null;
+    await checkMemberAccess(currentMemberUser);
+    memberClient.auth.onAuthStateChange((_event, session) => {
+      currentMemberUser = session?.user || null;
+      checkMemberAccess(currentMemberUser);
+    });
+  }
+
+  function renderMemberGateCopy() {
+    const appName = MEMBER_CONFIG.appName || "nutri-SCULPT Member App";
+    const price = MEMBER_CONFIG.priceLabel || "R99/month";
+    const title = elements.memberGate?.querySelector("h1");
+    const eyebrow = elements.memberGate?.querySelector(".eyebrow");
+    if (eyebrow) eyebrow.textContent = appName;
+    if (title) title.textContent = "Member access";
+    if (elements.memberGateText) {
+      elements.memberGateText.textContent = `Sign in to use ${appName}. Only active paid users can access the full tracker.`;
+    }
+    if (elements.memberSubscribe) {
+      elements.memberSubscribe.textContent = `Subscribe ${price}`;
+    }
+  }
+
+  async function signInMember() {
+    if (!memberClient) return;
+    const email = valueOf(elements.memberEmail);
+    const password = valueOf(elements.memberPassword);
+    if (!email || !password) {
+      setMemberStatus("Enter your email and password first.", "warning");
+      return;
+    }
+    setMemberStatus("Signing in...", "neutral");
+    const { data, error } = await memberClient.auth.signInWithPassword({ email, password });
+    if (error) {
+      setMemberStatus(error.message || "Could not sign in.", "warning");
+      return;
+    }
+    currentMemberUser = data?.user || null;
+    await checkMemberAccess(currentMemberUser);
+  }
+
+  async function signUpMember() {
+    if (!memberClient) return;
+    const email = valueOf(elements.memberEmail);
+    const password = valueOf(elements.memberPassword);
+    if (!email || !password) {
+      setMemberStatus("Enter an email and password to create an account.", "warning");
+      return;
+    }
+    if (password.length < 6) {
+      setMemberStatus("Use a password with at least 6 characters.", "warning");
+      return;
+    }
+    setMemberStatus("Creating account...", "neutral");
+    const { data, error } = await memberClient.auth.signUp({ email, password });
+    if (error) {
+      setMemberStatus(error.message || "Could not create account.", "warning");
+      return;
+    }
+    currentMemberUser = data?.session?.user || null;
+    setMemberStatus("Account created. If asked, confirm the email, then sign in. Access unlocks after subscription is active.", "success");
+    if (currentMemberUser) await checkMemberAccess(currentMemberUser);
+  }
+
+  async function signOutMember() {
+    if (memberClient) {
+      await memberClient.auth.signOut();
+    }
+    currentMemberUser = null;
+    lockMemberScreen("Signed out. Sign in to use the member dashboard.", { showAuth: true });
+  }
+
+  async function checkMemberAccess(user) {
+    if (!memberModeEnabled()) return true;
+    if (!user) {
+      lockMemberScreen("Sign in or create an account to continue.", { showAuth: true });
+      return false;
+    }
+    setMemberStatus("Checking subscription...", "neutral");
+    const { data, error } = await memberClient
+      .from("member_access")
+      .select("access_status, subscription_status, plan_name, current_period_end")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error) {
+      lockMemberScreen("Could not check access. Please try again or contact support.", { user, showAuth: false });
+      setMemberStatus(error.message || "Access check failed.", "warning");
+      return false;
+    }
+    if (memberProfileActive(data)) {
+      unlockMemberScreen(user, data);
+      return true;
+    }
+    lockMemberScreen("This account is not active yet. Subscribe, then tap Check access.", { user, showAuth: false });
+    setMemberStatus("Subscription needed before the dashboard opens.", "warning");
+    return false;
+  }
+
+  function memberProfileActive(profile) {
+    const access = String(profile?.access_status || "").toLowerCase();
+    const subscription = String(profile?.subscription_status || "").toLowerCase();
+    return ["active", "trialing"].includes(access) || ["active", "trialing"].includes(subscription);
+  }
+
+  function unlockMemberScreen(user, profile) {
+    document.body.classList.remove("member-locked");
+    elements.memberGate.hidden = true;
+    if (elements.memberBadge) {
+      const plan = profile?.plan_name || MEMBER_CONFIG.priceLabel || "Active";
+      elements.memberBadge.textContent = `${user.email} | ${plan}`;
+      elements.memberBadge.hidden = false;
+    }
+    if (elements.headerMemberSignOut) elements.headerMemberSignOut.hidden = false;
+    setMemberStatus("Member access active.", "success");
+  }
+
+  function lockMemberScreen(message, options = {}) {
+    document.body.classList.add("member-locked");
+    if (elements.memberGate) elements.memberGate.hidden = false;
+    if (elements.memberAuthPanel) elements.memberAuthPanel.hidden = !options.showAuth;
+    if (elements.memberLockedPanel) elements.memberLockedPanel.hidden = Boolean(options.showAuth);
+    if (elements.memberLockedText) elements.memberLockedText.textContent = message;
+    if (elements.memberLockedTitle) {
+      elements.memberLockedTitle.textContent = options.user ? "Subscription needed" : "Sign in";
+    }
+    if (elements.memberSignOut) elements.memberSignOut.hidden = !options.user;
+    if (elements.memberCheckAccess) elements.memberCheckAccess.hidden = !options.user;
+    if (elements.memberBadge) elements.memberBadge.hidden = true;
+    if (elements.headerMemberSignOut) elements.headerMemberSignOut.hidden = true;
+    setMemberStatus(message, options.showAuth ? "neutral" : "warning");
+  }
+
+  function setMemberStatus(message, type = "neutral") {
+    if (!elements.memberAccessStatus) return;
+    elements.memberAccessStatus.textContent = message;
+    elements.memberAccessStatus.classList.remove("warning", "success");
+    if (type === "warning" || type === "success") {
+      elements.memberAccessStatus.classList.add(type);
+    }
+  }
+
+  function startMemberSubscription() {
+    const email = currentMemberUser?.email || valueOf(elements.memberEmail);
+    if (MEMBER_CONFIG.paystackPaymentUrl) {
+      const url = new URL(MEMBER_CONFIG.paystackPaymentUrl, window.location.href);
+      if (email) url.searchParams.set("email", email);
+      window.open(url.toString(), "_blank", "noopener");
+      setMemberStatus("Payment page opened. After payment, return here and tap Check access.", "success");
+      return;
+    }
+    const support = MEMBER_CONFIG.supportEmail ? ` Contact ${MEMBER_CONFIG.supportEmail} for access.` : "";
+    setMemberStatus(`Paystack payment link is not connected yet.${support}`, "warning");
   }
 
   function registerServiceWorker() {
