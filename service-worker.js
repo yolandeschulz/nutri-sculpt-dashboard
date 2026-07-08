@@ -1,13 +1,13 @@
-const CACHE_NAME = "nutri-sculpt-dashboard-v28";
+const CACHE_NAME = "nutri-sculpt-dashboard-v29";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./index.html?v=20260708-28",
-  "./style.css?v=20260708-28",
-  "./app.js?v=20260708-28",
-  "./data.js?v=20260708-28",
-  "./member-config.js?v=20260708-28",
-  "./manifest.json?v=20260708-28",
+  "./index.html?v=20260708-29",
+  "./style.css?v=20260708-29",
+  "./app.js?v=20260708-29",
+  "./data.js?v=20260708-29",
+  "./member-config.js?v=20260708-29",
+  "./manifest.json?v=20260708-29",
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-192-maskable.png",
   "./assets/icons/icon-512.png",
