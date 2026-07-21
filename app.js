@@ -1,8 +1,7 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260708-29";
+  const APP_VERSION = "20260721-30";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
-  const MEMBER_CONFIG = window.NUTRI_MEMBER_CONFIG || {};
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
     protein: 100,
@@ -68,22 +67,6 @@
     updateNoticeText: document.querySelector("#updateNoticeText"),
     updateNow: document.querySelector("#updateNow"),
     updateLater: document.querySelector("#updateLater"),
-    memberGate: document.querySelector("#memberGate"),
-    memberGateText: document.querySelector("#memberGateText"),
-    memberAuthPanel: document.querySelector("#memberAuthPanel"),
-    memberLockedPanel: document.querySelector("#memberLockedPanel"),
-    memberLockedTitle: document.querySelector("#memberLockedTitle"),
-    memberLockedText: document.querySelector("#memberLockedText"),
-    memberEmail: document.querySelector("#memberEmail"),
-    memberPassword: document.querySelector("#memberPassword"),
-    memberSignIn: document.querySelector("#memberSignIn"),
-    memberSignUp: document.querySelector("#memberSignUp"),
-    memberSubscribe: document.querySelector("#memberSubscribe"),
-    memberCheckAccess: document.querySelector("#memberCheckAccess"),
-    memberSignOut: document.querySelector("#memberSignOut"),
-    headerMemberSignOut: document.querySelector("#headerMemberSignOut"),
-    memberAccessStatus: document.querySelector("#memberAccessStatus"),
-    memberBadge: document.querySelector("#memberBadge"),
     shareImportPanel: document.querySelector("#shareImportPanel"),
     shareImportText: document.querySelector("#shareImportText"),
     importPastedState: document.querySelector("#importPastedState"),
@@ -219,8 +202,6 @@
   let editingCustomMealId = "";
   let deferredInstallPrompt = null;
   let availableAppVersion = "";
-  let memberClient = null;
-  let currentMemberUser = null;
   updateRecipeIndexes();
 
   window.nutriSculptPickMeal = handlePlanSlotChange;
@@ -228,7 +209,6 @@
   attachEvents();
   registerServiceWorker();
   setupInstallAndUpdateHelpers();
-  setupMemberAccess();
   renderAll();
   showAppVersion();
 
@@ -667,12 +647,6 @@
       if (elements.updateNotice) elements.updateNotice.hidden = true;
       toast("Update hidden for now. You can still refresh from Settings.");
     });
-    elements.memberSignIn?.addEventListener("click", signInMember);
-    elements.memberSignUp?.addEventListener("click", signUpMember);
-    elements.memberSubscribe?.addEventListener("click", startMemberSubscription);
-    elements.memberCheckAccess?.addEventListener("click", () => checkMemberAccess(currentMemberUser));
-    elements.memberSignOut?.addEventListener("click", signOutMember);
-    elements.headerMemberSignOut?.addEventListener("click", signOutMember);
     elements.exportState?.addEventListener("click", exportSavedDashboard);
     elements.copyStateText?.addEventListener("click", copySavedDashboardText);
     elements.importState?.addEventListener("click", () => elements.importStateFile?.click());
@@ -3648,183 +3622,17 @@
     setTimeout(() => elements.toast.classList.remove("show"), 2200);
   }
 
-  function memberModeEnabled() {
-    return Boolean(
-      MEMBER_CONFIG.enabled &&
-      MEMBER_CONFIG.supabaseUrl &&
-      MEMBER_CONFIG.supabaseAnonKey
-    );
-  }
 
-  async function setupMemberAccess() {
-    renderMemberGateCopy();
-    if (!memberModeEnabled()) {
-      document.body.classList.remove("member-locked");
-      elements.memberGate.hidden = true;
-      elements.memberBadge.hidden = true;
-      elements.headerMemberSignOut.hidden = true;
-      return;
-    }
-    if (!window.supabase?.createClient) {
-      lockMemberScreen("Member login could not load. Check the internet connection and refresh the app.", { showAuth: false });
-      return;
-    }
-    memberClient = window.supabase.createClient(MEMBER_CONFIG.supabaseUrl, MEMBER_CONFIG.supabaseAnonKey);
-    lockMemberScreen("Checking member access...", { showAuth: false });
-    const { data } = await memberClient.auth.getSession();
-    currentMemberUser = data?.session?.user || null;
-    await checkMemberAccess(currentMemberUser);
-    memberClient.auth.onAuthStateChange((_event, session) => {
-      currentMemberUser = session?.user || null;
-      checkMemberAccess(currentMemberUser);
-    });
-  }
 
-  function renderMemberGateCopy() {
-    const appName = MEMBER_CONFIG.appName || "nutri-SCULPT Member App";
-    const price = MEMBER_CONFIG.priceLabel || "R99/month";
-    const title = elements.memberGate?.querySelector("h1");
-    const eyebrow = elements.memberGate?.querySelector(".eyebrow");
-    if (eyebrow) eyebrow.textContent = appName;
-    if (title) title.textContent = "Member access";
-    if (elements.memberGateText) {
-      elements.memberGateText.textContent = `Sign in to use ${appName}. Only active paid users can access the full tracker.`;
-    }
-    if (elements.memberSubscribe) {
-      elements.memberSubscribe.textContent = `Subscribe ${price}`;
-    }
-  }
 
-  async function signInMember() {
-    if (!memberClient) return;
-    const email = valueOf(elements.memberEmail);
-    const password = valueOf(elements.memberPassword);
-    if (!email || !password) {
-      setMemberStatus("Enter your email and password first.", "warning");
-      return;
-    }
-    setMemberStatus("Signing in...", "neutral");
-    const { data, error } = await memberClient.auth.signInWithPassword({ email, password });
-    if (error) {
-      setMemberStatus(error.message || "Could not sign in.", "warning");
-      return;
-    }
-    currentMemberUser = data?.user || null;
-    await checkMemberAccess(currentMemberUser);
-  }
 
-  async function signUpMember() {
-    if (!memberClient) return;
-    const email = valueOf(elements.memberEmail);
-    const password = valueOf(elements.memberPassword);
-    if (!email || !password) {
-      setMemberStatus("Enter an email and password to create an account.", "warning");
-      return;
-    }
-    if (password.length < 6) {
-      setMemberStatus("Use a password with at least 6 characters.", "warning");
-      return;
-    }
-    setMemberStatus("Creating account...", "neutral");
-    const { data, error } = await memberClient.auth.signUp({ email, password });
-    if (error) {
-      setMemberStatus(error.message || "Could not create account.", "warning");
-      return;
-    }
-    currentMemberUser = data?.session?.user || null;
-    setMemberStatus("Account created. If asked, confirm the email, then sign in. Access unlocks after subscription is active.", "success");
-    if (currentMemberUser) await checkMemberAccess(currentMemberUser);
-  }
 
-  async function signOutMember() {
-    if (memberClient) {
-      await memberClient.auth.signOut();
-    }
-    currentMemberUser = null;
-    lockMemberScreen("Signed out. Sign in to use the member dashboard.", { showAuth: true });
-  }
 
-  async function checkMemberAccess(user) {
-    if (!memberModeEnabled()) return true;
-    if (!user) {
-      lockMemberScreen("Sign in or create an account to continue.", { showAuth: true });
-      return false;
-    }
-    setMemberStatus("Checking subscription...", "neutral");
-    const { data, error } = await memberClient
-      .from("member_access")
-      .select("access_status, subscription_status, plan_name, current_period_end")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (error) {
-      lockMemberScreen("Could not check access. Please try again or contact support.", { user, showAuth: false });
-      setMemberStatus(error.message || "Access check failed.", "warning");
-      return false;
-    }
-    if (memberProfileActive(data)) {
-      unlockMemberScreen(user, data);
-      return true;
-    }
-    lockMemberScreen("This account is not active yet. Subscribe, then tap Check access.", { user, showAuth: false });
-    setMemberStatus("Subscription needed before the dashboard opens.", "warning");
-    return false;
-  }
 
-  function memberProfileActive(profile) {
-    const access = String(profile?.access_status || "").toLowerCase();
-    const subscription = String(profile?.subscription_status || "").toLowerCase();
-    return ["active", "trialing"].includes(access) || ["active", "trialing"].includes(subscription);
-  }
 
-  function unlockMemberScreen(user, profile) {
-    document.body.classList.remove("member-locked");
-    elements.memberGate.hidden = true;
-    if (elements.memberBadge) {
-      const plan = profile?.plan_name || MEMBER_CONFIG.priceLabel || "Active";
-      elements.memberBadge.textContent = `${user.email} | ${plan}`;
-      elements.memberBadge.hidden = false;
-    }
-    if (elements.headerMemberSignOut) elements.headerMemberSignOut.hidden = false;
-    setMemberStatus("Member access active.", "success");
-  }
 
-  function lockMemberScreen(message, options = {}) {
-    document.body.classList.add("member-locked");
-    if (elements.memberGate) elements.memberGate.hidden = false;
-    if (elements.memberAuthPanel) elements.memberAuthPanel.hidden = !options.showAuth;
-    if (elements.memberLockedPanel) elements.memberLockedPanel.hidden = Boolean(options.showAuth);
-    if (elements.memberLockedText) elements.memberLockedText.textContent = message;
-    if (elements.memberLockedTitle) {
-      elements.memberLockedTitle.textContent = options.user ? "Subscription needed" : "Sign in";
-    }
-    if (elements.memberSignOut) elements.memberSignOut.hidden = !options.user;
-    if (elements.memberCheckAccess) elements.memberCheckAccess.hidden = !options.user;
-    if (elements.memberBadge) elements.memberBadge.hidden = true;
-    if (elements.headerMemberSignOut) elements.headerMemberSignOut.hidden = true;
-    setMemberStatus(message, options.showAuth ? "neutral" : "warning");
-  }
 
-  function setMemberStatus(message, type = "neutral") {
-    if (!elements.memberAccessStatus) return;
-    elements.memberAccessStatus.textContent = message;
-    elements.memberAccessStatus.classList.remove("warning", "success");
-    if (type === "warning" || type === "success") {
-      elements.memberAccessStatus.classList.add(type);
-    }
-  }
 
-  function startMemberSubscription() {
-    const email = currentMemberUser?.email || valueOf(elements.memberEmail);
-    if (MEMBER_CONFIG.paystackPaymentUrl) {
-      const url = new URL(MEMBER_CONFIG.paystackPaymentUrl, window.location.href);
-      if (email) url.searchParams.set("email", email);
-      window.open(url.toString(), "_blank", "noopener");
-      setMemberStatus("Payment page opened. After payment, return here and tap Check access.", "success");
-      return;
-    }
-    const support = MEMBER_CONFIG.supportEmail ? ` Contact ${MEMBER_CONFIG.supportEmail} for access.` : "";
-    setMemberStatus(`Paystack payment link is not connected yet.${support}`, "warning");
-  }
 
   function registerServiceWorker() {
     if (!("serviceWorker" in navigator)) return;
@@ -3973,12 +3781,51 @@
     const link = document.createElement("a");
     const date = new Date().toISOString().slice(0, 10);
     link.href = url;
-    link.download = `nutri-sculpt-saved-data-${date}.json`;
+    link.download = `nutri-sculpt-backup-${date}.json`;
     document.body.appendChild(link);
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    toast("Dashboard backup saved.");
+    const summary = describeSavedData(state);
+    toast(`Backup saved (${date}): ${summary.plannedMeals} meals, ${summary.tickedDays} ticked days. Send this one file to the other device.`);
+  }
+
+  function describeSavedData(source) {
+    const data = source || {};
+    let plannedMeals = 0;
+    Object.values(data.plan || {}).forEach((weekPlan) => {
+      Object.values(weekPlan || {}).forEach((dayPlan) => {
+        Object.values(dayPlan || {}).forEach((value) => {
+          if (value) plannedMeals += 1;
+        });
+      });
+    });
+    let tickedDays = 0;
+    Object.values(data.daily || {}).forEach((entry) => {
+      if (entry && typeof entry === "object" && Object.values(entry).some(Boolean)) tickedDays += 1;
+    });
+    let workoutsDone = 0;
+    Object.values(data.workouts || {}).forEach((entry) => {
+      if (entry === true) workoutsDone += 1;
+      else if (entry && typeof entry === "object") workoutsDone += Object.values(entry).filter(Boolean).length;
+    });
+    const measuredWeeks = Object.values(data.measurements || {}).filter((entry) =>
+      entry && typeof entry === "object" && Object.values(entry).some((v) => String(v ?? "").trim() !== "")
+    ).length;
+    return {
+      plannedMeals, tickedDays, workoutsDone, measuredWeeks,
+      customMeals: Array.isArray(data.customMeals) ? data.customMeals.length : 0
+    };
+  }
+
+  function describeSavedDataText(summary) {
+    return [
+      `  - ${summary.plannedMeals} meals planned`,
+      `  - ${summary.customMeals} custom meals saved`,
+      `  - ${summary.tickedDays} days with rules ticked`,
+      `  - ${summary.workoutsDone} workouts marked done`,
+      `  - ${summary.measuredWeeks} weeks with measurements`
+    ].join("\n");
   }
 
   async function copySavedDashboardText() {
@@ -4053,7 +3900,31 @@
     if (!importedState || typeof importedState !== "object" || !importedState.plan) {
       throw new Error("Not a dashboard save file.");
     }
-    if (!confirm("Import this saved dashboard? It will replace the saved data on this browser.")) {
+    const incoming = describeSavedData(importedState);
+    const current = describeSavedData(state);
+    let exportedAt = "an unknown date";
+    if (imported.exportedAt) {
+      const stamp = new Date(imported.exportedAt);
+      if (!Number.isNaN(stamp.getTime())) exportedAt = stamp.toLocaleString();
+    }
+    const warning = [
+      "RESTORE FROM BACKUP",
+      "",
+      "This REPLACES everything saved on this device.",
+      "The two sets of data are NOT merged together.",
+      "",
+      `Backup was made: ${exportedAt}`,
+      "",
+      "The backup contains:",
+      describeSavedDataText(incoming),
+      "",
+      "This device currently has:",
+      describeSavedDataText(current),
+      "",
+      "Replace this device's data with the backup?"
+    ].join("\n");
+    if (!confirm(warning)) {
+      toast("Restore cancelled. Nothing on this device was changed.");
       return false;
     }
     const savedUsdaApiKey = state.nutritionLookup?.usdaApiKey || valueOf(elements.usdaApiKey);
