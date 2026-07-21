@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json?v=20260708-27">
   <link rel="icon" href="assets/icons/favicon.ico?v=20260708-27" sizes="any">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260708-27">
-  <link rel="stylesheet" href="style.css?v=20260721-30">
+  <link rel="stylesheet" href="style.css?v=20260721-31">
 </head>
 <body>
 
@@ -449,19 +449,6 @@
       </div>
       <section class="settings-panel">
         <h3>Add to phone</h3>
-        <p class="device-note">Saved on this device only. Use Back up and Restore to move to another device.</p>
-        <details class="device-help">
-          <summary>How do I move my data to another phone or laptop?</summary>
-          <div class="device-help-body">
-            <p>This app keeps everything in the browser on the device you are using. Your laptop and your phone each keep their own separate copy. Nothing is stored online.</p>
-            <ol>
-              <li>On the device with the data you want to keep, tap <strong>Back up my dashboard</strong>. It saves one file with today&rsquo;s date in the name.</li>
-              <li>Send that file to the other device. WhatsApp or email both work.</li>
-              <li>On the other device, tap <strong>Restore from file</strong> and choose the file.</li>
-            </ol>
-            <p class="device-warning"><strong>Important:</strong> restoring replaces everything on that device. It does not merge. If the other device already has work you want to keep, back that one up first.</p>
-          </div>
-        </details>
         <div class="info-band compact-info" id="installStatus">Add this app to the home screen so it opens like a normal app.</div>
         <div id="installSteps" class="phone-help-grid"></div>
         <div class="settings-actions">
@@ -479,6 +466,7 @@
         </div>
 
         <h3>Backup and restore</h3>
+        <p class="device-note">Saved on this device only. Restoring a backup <strong>replaces</strong> everything on this device &mdash; it does not merge.</p>
         <div class="settings-actions">
           <button id="exportState" class="ghost-button" type="button">Back up my dashboard</button>
           <button id="importState" class="ghost-button" type="button">Restore from file</button>
@@ -503,7 +491,7 @@
   <p class="device-footer-note">Saved on this device only. Use Back up and Restore in Settings to move to another device.</p>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="data.js?v=20260721-30"></script>
-  <script src="app.js?v=20260721-30"></script>
+  <script src="data.js?v=20260721-31"></script>
+  <script src="app.js?v=20260721-31"></script>
 </body>
 </html>

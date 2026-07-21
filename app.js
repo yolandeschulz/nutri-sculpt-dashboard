@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260721-30";
+  const APP_VERSION = "20260721-31";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
