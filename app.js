@@ -1,6 +1,6 @@
 (function () {
   const DATA = window.NUTRI_SCULPT_DATA;
-  const APP_VERSION = "20260721-31";
+  const APP_VERSION = "20260721-32";
   const STORAGE_KEY = "nutriSculptDashboardState.v1";
   const DEFAULT_MACRO_TARGETS = {
     calories: 1500,
@@ -433,8 +433,34 @@
   }
 
   function saveState() {
+    state.stateUpdatedAt = new Date().toISOString();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    try { window.nutriSculptSyncHooks?.onLocalChange?.(); } catch { /* sync is optional */ }
   }
+
+  window.nutriSculptSyncApi = {
+    version: APP_VERSION,
+    storageKey: STORAGE_KEY,
+    getState() { return JSON.parse(JSON.stringify(state)); },
+    getStateUpdatedAt() { return state.stateUpdatedAt || null; },
+    describe(source) { return describeSavedData(source || state); },
+    describeText(summary) { return describeSavedDataText(summary); },
+    buildBackupPayload() { return buildSharePayload(); },
+    downloadBackup() { exportSavedDashboard(); },
+    applyState(incoming, meta) {
+      if (!incoming || typeof incoming !== "object" || !incoming.plan) return false;
+      const keepKey = state.nutritionLookup?.usdaApiKey || "";
+      state = mergeState(defaultState(), incoming);
+      if (keepKey) state.nutritionLookup.usdaApiKey = keepKey;
+      if (meta?.stateUpdatedAt) state.stateUpdatedAt = meta.stateUpdatedAt;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      updateRecipeIndexes();
+      initialiseControls();
+      renderAll();
+      return true;
+    },
+    notify(message) { toast(message); }
+  };
 
   function initialiseControls() {
     elements.activeWeek.innerHTML = Array.from({ length: 8 }, (_, index) => {

@@ -1944,3 +1944,12 @@ h3 {
 .device-note{margin:.5rem 0 0;padding:.6rem .75rem;border-left:3px solid #2f855a;background:#f2f8f4;border-radius:6px;font-size:.9rem;line-height:1.5;color:#2d3a33}
 .device-footer-note{max-width:1200px;margin:1.5rem auto 2.5rem;padding:0 1rem;font-size:.85rem;line-height:1.5;color:#6b7280;text-align:center}
 @media(max-width:640px){.device-footer-note{margin:1rem auto 2rem}}
+
+/* ---- Cross-device sync panel (v32) ---- */
+.sync-panel{margin:0 0 .5rem}
+.sync-status{margin:.6rem 0;padding:.65rem .8rem;border-radius:6px;font-size:.9rem;line-height:1.5;border-left:3px solid #9aa5a0;background:#f5f7f6;color:#2d3a33}
+.sync-status.sync-good{border-left-color:#2f855a;background:#f2f8f4}
+.sync-status.sync-warning{border-left-color:#c98a2e;background:#fdf6ec}
+.sync-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem;margin:.6rem 0}
+.sync-form label{display:grid;gap:.3rem;font-size:.85rem;font-weight:600;color:#35403a}
+@media(max-width:640px){.sync-form{grid-template-columns:1fr}}

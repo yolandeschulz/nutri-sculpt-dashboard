@@ -12,7 +12,7 @@
   <link rel="manifest" href="manifest.json?v=20260708-27">
   <link rel="icon" href="assets/icons/favicon.ico?v=20260708-27" sizes="any">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png?v=20260708-27">
-  <link rel="stylesheet" href="style.css?v=20260721-31">
+  <link rel="stylesheet" href="style.css?v=20260721-32">
 </head>
 <body>
 
@@ -465,6 +465,9 @@
           </div>
         </div>
 
+        <h3>Sync across devices</h3>
+        <div id="syncPanel" class="sync-panel"></div>
+
         <h3>Backup and restore</h3>
         <p class="device-note">Saved on this device only. Restoring a backup <strong>replaces</strong> everything on this device &mdash; it does not merge.</p>
         <div class="settings-actions">
@@ -491,7 +494,9 @@
   <p class="device-footer-note">Saved on this device only. Use Back up and Restore in Settings to move to another device.</p>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="data.js?v=20260721-31"></script>
-  <script src="app.js?v=20260721-31"></script>
+  <script src="data.js?v=20260721-32"></script>
+  <script src="app.js?v=20260721-32"></script>
+  <script src="sync-config.js?v=20260721-32"></script>
+  <script src="sync.js?v=20260721-32"></script>
 </body>
 </html>
