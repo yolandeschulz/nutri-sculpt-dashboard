@@ -6,7 +6,7 @@
 window.NUTRI_SYNC_CONFIG = {
   // Set this to true AFTER running supabase-sync-setup.sql and enabling
   // email/password sign-in in Supabase. Until then the app stays local-only.
-  enabled: false,
+  enabled: true,
   supabaseUrl: "https://bojfddaumbdggrtgynnm.supabase.co",
   supabaseAnonKey: "sb_publishable_D-vfS-pQyyvSbC4gMq5qFQ_HY89o6EQ"
 };
